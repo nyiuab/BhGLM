@@ -7,4 +7,4 @@ License: GPL
 
 Author: Nengjun Yi <nyi@uab.edu>
 
-Maintainer: Nengjun Yi <nyi@uab.edu>; Xinyan Zhang <xzhang@georgiasouthern.edu>
+Maintainer: Nengjun Yi <nyi@uab.edu>
