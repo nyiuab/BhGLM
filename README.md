@@ -4,8 +4,6 @@ This R package provides functions for setting up and fitting various Bayesian hi
 
 (note: the function glmm.nb for negative binomial mixed models has been moved to the package NBZIMM http://github.com//nyiuab//NBZIMM). 
 
-License: GPL
-
 Author: Nengjun Yi <nyi@uab.edu>
 
 Maintainer: Nengjun Yi <nyi@uab.edu>
