@@ -12,4 +12,5 @@ Description: Functions for setting up and fitting various Bayesian hierarchical 
 License: MIT + file LICENSE
 LazyLoad: yes
 LazyData: yes
-Built: R 3.5.1; ; 2019-02-14 02:10:37 UTC; windows
+NeedsCompilation: no
+Packaged: 2019-02-14 02:10:14 UTC; Nyi
