@@ -1,0 +1,16 @@
+Package: BhGLM
+Type: Package
+Title: Bayesian hierarchical GLMs and survival models, with
+        applications to Genomics and Epidemiology
+Version: 1.1.0
+Date: 2018-12-05
+Author: Nengjun Yi <nyi@uab.edu>
+Maintainer: Nengjun Yi <nyi@uab.edu>
+Description: Functions for setting up and fitting various Bayesian hierarchical models, 
+             for numerically and graphically summarizing the fitted models, and for evaluating the predictive performance. 
+	     The functions can be used to analyze not only general data but also large-scale genomic data (i.e., detecting disease-associated genes or variants, predictive and prognostic modeling of diseases and traits).
+License: MIT + file LICENSE
+LazyLoad: yes
+LazyData: yes
+NeedsCompilation: no
+Packaged: 2019-02-14 02:10:14 UTC; Nyi
