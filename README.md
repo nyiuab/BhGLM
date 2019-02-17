@@ -11,5 +11,5 @@ Maintainer: Nengjun Yi <nyi@uab.edu>
 Package Installation in R:
 ```{r}
 library(devtools)
-install_github("nyiuab/BhGLM", ref="Easy_Install")
+install_github("nyiuab/BhGLM")
 ```
