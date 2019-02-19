@@ -7,13 +7,13 @@
     "folds" : "",
     "hash" : "0",
     "id" : "1FC7C32",
-    "lastKnownWriteTime" : 1550594042,
-    "last_content_update" : 1550594042180,
+    "lastKnownWriteTime" : 1550595070,
+    "last_content_update" : 1550595070065,
     "path" : "~/GitHub/BhGLM/vignettes/bhglm.Rmd",
     "project_path" : "vignettes/bhglm.Rmd",
     "properties" : {
-        "cursorPosition" : "256,111",
-        "scrollLine" : "233"
+        "cursorPosition" : "2,19",
+        "scrollLine" : "0"
     },
     "read_only" : false,
     "read_only_alternatives" : [
