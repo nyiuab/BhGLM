@@ -1,6 +1,6 @@
 ---
 title: "Introduction to BhGLM"
-author: "Vignette Author"
+author: "Yi Nengjun"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
@@ -11,55 +11,249 @@ vignette: >
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
+  eval = F,
   collapse = TRUE,
   comment = "#>"
 )
 ```
 
-Vignettes are long form documentation commonly included in packages. Because they are part of the distribution of the package, they need to be as compact as possible. The `html_vignette` output type provides a custom style sheet (and tweaks some options) to ensure that the resulting html is as small as possible. The `html_vignette` format:
+This package provides functions for setting up and fitting various Bayesian hierarchical models (generalized linear models (GLMs), Cox survival models, negative binomial models, and ordered logistic or probit regressions), for numerically and graphically summarizing the fitted models, and for evaluating the predictive performance. Several types of priors on the coefficients can be used: double-exponential, Student-t, mixture double-exponential, and mixture t. The models are fitted by using fast algorithms for estimating posterior modes rather than MCMC. The methods can be used to analyze not only general data but also large-scale genomic data (i.e., detecting disease-associated genes or variants, predictive and prognostic modeling of diseases and traits).
 
-- Never uses retina figures
-- Has a smaller default figure size
-- Uses a custom CSS stylesheet instead of the default Twitter Bootstrap style
+## Data Preparation Functions
+* `covariates`: This function standardizes continuous variables, transforms categorical variables to indicator variables and centers the transformed variables.
+    ```{r eval=F}
+    # fake data
+    age = rnorm(50, 30, 0.1)
+    sex = sample(x = c("male", "female"), size = 50, replace = T, prob = c(0.5, 0.5))
+    diet = sample(x = c(1, 5), size = 50, replace = T, prob = c(0.3, 0.7))
+    race = sample(c("Asian", "White", "Black"), size = 50, replace = T, prob = c(0.2, 0.4, 0.4))
+    
+    x.con = age # continuous variable
+    x.cat = cbind(sex, diet, race) # categorical variables
+    
+    x.con[1:2] = NA
+    x.cat[1,] = NA
+    
+    x1 = covariates(x.con = x.con, x.cat = x.cat, con.rescale = F, cat.center = F, 
+                    fill.missing = T)
+    x1
+    x2 = covariates(x.con = x.con, x.cat = x.cat, con.rescale = T, cat.center = F, 
+                    fill.missing = T)
+    x2
+    x3 = covariates(x.con = x.con, x.cat = x.cat, con.rescale = T, cat.center = T, 
+                    fill.missing = T)
+    x3
+    ```
+* `make.inter`: This function is to construct a design matrix of interactions from two main-effect design matrices.
+    ```{r eval=F}
+    data(fake.cv) #load data from BhGLM
+    cov1 = fake.cv[, 3, drop = F] #get the first covariate
+    geno = fake.cv[, -c(1:4)] #get genotype data
+    x.main = make.main(geno = geno, model = "Cockerham", fill.missing = T)
+    x.GxE = make.inter(cov1, x.main, back = 0) #interactions between cov1 and all main effects
+    x.GxG1 = make.inter(x.main[, 1:10], x.main[, 11:20], back = 1) # some GxG interactions 
+    x.GxG2 = make.inter(x.main, x.main, back = 1) # all GxG interactions 
+    ```
+* `make.main`: This function is to construct a design matrix of main effects from genotypic data of genetic markers. The genotypic data can include missing values. Different genetic models can be used, which transform the three-level (or two-level for a backcross) genotypic data to main-effect predictors.
+    ```{r eval=F}
+    ## Example 1: genetic association studies
+data(fake.cv) #load data from BhGLM
+geno = fake.cv[, -c(1:4)] #get genotype data
+x = make.main(geno = geno, model = "additive", fill.missing = T)
+x = make.main(geno = geno, model = "Cockerham", fill.missing = T, ind.group = fake.cv$y1)
 
-## Vignette Info
+## Example 2: QTL mapping in experimental crosses
+require(qtl)
+require(qtlbim)
+data(listeria)
+listeria
+x = make.main(geno = listeria, model = "Cockerham", fill.missing = T, geno.order = F, loci.names = "position")
+## then we can follow the example in bglm to detect QTL
+    ```
 
-Note the various macros within the `vignette` section of the metadata block above. These are required in order to instruct R how to build the vignette. Note that you should change the `title` field and the `\VignetteIndexEntry` to match the title of your vignette.
+## Model Functions
+* `bcoxph`
+This function is to set up Bayesian hierarchical Cox proportonal hazards model and to fit the model using the EM Newton-Raphson algorithm. As in bglm, several types of priors on the coefficients can be used. The Bayesian hierarchical Cox model includes classical Cox model and ridge Cox regression as special cases. It can be used for analyzing general survival data and large-scale and highly-correlated variables (for example, detecting disease-associated factors and predicting survival times).
+    ```{r}
+    library(BhGLM)
+    library(survival)
+    
+    N = 1000
+    K = 100
+    x = sim.x(n=N, m=K, corr=0.6) # simulate correlated continuous variables  
+    h = rep(0.1, 4) # assign four non-zero main effects to have the assumed heritabilty 
+    nz = as.integer(seq(5, K, by=K/length(h))); nz
+    yy = sim.y(x=x[, nz], mu=0, herit=h, p.neg=0.5) # simulate responses
+    yy$coefs
+    
+    y = yy$y.surv
+    d = table(y[,2]); d[1]/sum(d) # cencoring proportion
+    
+    
+    # jointly update
+    # Compare with conventional and ridge Cox model
+    par(mfrow = c(2, 2), cex.axis = 1, mar = c(3, 4, 4, 4))
+    gap = 10
+    
+    ps = 0.05
+    f1 = bcoxph(y ~ ., data = x, prior = "de", prior.scale = ps)
+    # summary.bh(f1)
+    plot.bh(f1, threshold = 0.01, gap = gap, main = "Cox with double-exponential")
+    
+    f2 = bcoxph(y ~ ., data = x, prior = "t", prior.scale = ps/1.4)
+    # summary.bh(f2)
+    plot.bh(f2, threshold = 0.01, gap = gap, main = "Cox with t")
+    
+    ss = c(0.04, 0.5) 
+    f3 = bcoxph(y ~ ., data = x, prior = "mde", ss = ss)
+    # summary.bh(f3)
+    plot.bh(f3, threshold = 0.01, gap = gap, main = "Cox with mixture double exponential") 
+    
+    ss = c(0.04, 0.5) 
+    f4 = bcoxph(y ~ ., data = x, prior = "mt", ss = ss)
+    # summary.bh(f4)
+    plot.bh(f4, threshold = 0.01, gap = gap, main = "Cox with mixture t") 
+    
+    
+    # group-wise update
+    ps = 0.05
+    f1 = bcoxph(y ~ ., data = x, prior = "de", method.coef = 50, prior.scale = ps)
+    #summary.bh(f1)
+    plot.bh(coefs = f2$coefficients, threshold = 10, gap = gap)  
+    ```
+* `bglm`: Bayesian Hierarchical Generalized Linear Models (GLMs)
+    ```{r}
+    N = 1000
+    K = 100
+    x = sim.x(n=N, m=K, corr=0.6) # simulate correlated continuous variables  
+    h = rep(0.1, 4) # assign four non-zero main effects to have the assumed heritabilty 
+    nz = as.integer(seq(5, K, by=K/length(h))); nz
+    yy = sim.y(x=x[, nz], mu=0, herit=h, p.neg=0.5, sigma=1.6, theta=2) # simulate responses
+    yy$coefs
+    
+    
+    # y = yy$y.normal; fam = gaussian; y = scale(y)
+    # y = yy$y.ordinal; fam = binomial
+    y = yy$y.nb; fam = NegBin
+    
+    # jointly fit all variables (can be slow if m is large)
+    par(mfrow = c(2, 2), cex.axis = 1, mar = c(3, 4, 4, 4))
+    gap = 10
+    
+    ps = 0.05
+    f1 = bglm(y ~ ., data = x, family = fam, prior = "de", prior.scale = ps)   
+    plot.bh(f1, vars.rm = 1, threshold = 0.01, gap = gap, main = "de")  
+    
+    f2 = bglm(y ~ ., data = x, family = fam, prior = "t", prior.scale = ps/1.4)   
+    plot.bh(f2, vars.rm = 1, threshold = 0.01, gap = gap, main = "t")  
+    
+    ss = c(0.04, 0.5) 
+    f3 = bglm(y ~ ., data = x, family = fam, prior = "mde", ss = ss)   
+    plot.bh(f3, vars.rm = 1, threshold = 0.01, gap = gap, main = "mde")  
+    
+    ss = c(0.04, 0.5)
+    f4 = bglm(y ~ ., data = x, family = fam, prior = "mt", ss = ss, prior.df=Inf)   
+    plot.bh(f4, vars.rm = 1, threshold = 0.01, gap = gap, main = "mt")  
+    
+    
+    # group-wise update (can be much faster if m is large)
+    ps = 0.05
+    f1 = bglm(y ~ ., data = x, family = fam, prior = "de", method.coef = 50, prior.scale = ps) # update 50 coefficients at a time
+    plot.bh(f1, vars.rm = 1, threshold = 0.01, gap = gap)  
+    ```
+* `bmlasso`: 	Bayesian Spike-and-Slab Lasso or Ridge GLMs and Cox Models
+```{r}
+library(BhGLM)
+library(survival)
+library(glmnet)
 
-## Styles
 
-The `html_vignette` template includes a basic CSS theme. To override this theme you can specify your own CSS in the document metadata as follows:
+N = 1000
+K = 100
+x = sim.x(n=N, m=K, corr=0.6) # simulate correlated continuous variables  
+h = rep(0.1, 4) # assign four non-zero main effects to have the assumed heritabilty 
+nz = as.integer(seq(5, K, by=K/length(h))); nz
+yy = sim.y(x=x[, nz], mu=0, herit=h, p.neg=0.5, sigma=1.6) # simulate responses
+yy$coefs
 
-    output: 
-      rmarkdown::html_vignette:
-        css: mystyles.css
+# y = yy$y.normal; fam = "gaussian"; y = scale(y)
+# y = yy$y.ordinal; fam = "binomial"
+y = yy$y.surv; fam = "cox" 
 
-## Figures
+group = NULL
+#group = rep(0, 21)
+#for(j in 1:length(group)) group[j] = (j-1) * K/(length(group)-1)
 
-The figure sizes have been customised so that you can easily put two images side-by-side. 
+# lasso and mixture lasso
 
-```{r, fig.show='hold'}
-plot(1:10)
-plot(10:1)
+f1 = glmNet(x, y, family = fam, ncv = 1) 
+
+ps = f1$prior.scale; ps 
+ss = c(ps, 0.5)
+f2 = bmlasso(x, y, family = fam, prior = "mde", ss = ss, group = group)
+
+par(mfrow = c(1, 2), mar = c(3, 4, 4, 4))
+gap = 10
+plot.bh(coefs = f1$coef, threshold = f1$df, gap = gap, main = "lasso") 
+plot.bh(coefs = f2$coef, threshold = f2$df, gap = gap, main = "mixture lasso") 
 ```
+* `bpolr`: 	Bayesian Hierarchical Ordered Logistic or Probit Regressions for Ordinal Response
+```{r}
+library(BhGLM)
 
-You can enable figure captions by `fig_caption: yes` in YAML:
 
-    output:
-      rmarkdown::html_vignette:
-        fig_caption: yes
+N = 1000
+K = 100
+x = sim.x(n = N, m = K, corr = 0.6) # simulate correlated variables  
+x = as.matrix(x)
+h = rep(0.1, 4) # assign non-zero effects to have the assumed heritabilty 
+nz = as.integer(seq(5, K, by=K/length(h))); nz
+yy = sim.y(x=x[, nz], mu = 10, herit=h, p.neg=0.5, sigma=1.6, quantiles = c(0.3, 0.6)) # simulate responses
+yy$coefs
+y = as.factor(yy$y.ordinal)
+table(y)
 
-Then you can use the chunk option `fig.cap = "Your figure caption."` in **knitr**.
 
-## More Examples
+par(mfrow = c(1, 3), cex.axis = 1, mar = c(3, 4, 4, 4))
+# classical ordered logistic regression
+library(MASS)
+f1 = polr(y ~ ., data = x, Hess = T)
+plot.bh(f1, gap = 5)
+summary.bh(f1)
 
-You can write math expressions, e.g. $Y = X\beta + \epsilon$, footnotes^[A footnote here.], and tables, e.g. using `knitr::kable()`.
+# equivalent to classical ordered logistic regression
+f2 = bpolr(y ~ ., data = x, prior.scale = Inf)
+plot.bh(f2, gap = 5)
+summary.bh(f2)
 
-```{r, echo=FALSE, results='asis'}
-knitr::kable(head(mtcars, 10))
+# hierarchical ordered logistic regression
+f3 = bpolr(y ~ ., data = x, prior.scale = 0.05)
+plot.bh(f3, gap = 5)
+summary.bh(f3)
 ```
+* `glmNet`: Fit a GLM or Cox Model with lasso or elastic net
 
-Also a quote using `>`:
+## Summary And Validation Functions
+* `cv.bh`: Cross-Validation for Bayesian Hierarchical GLMs and Cox Model or Elastic Net (including Lasso and Ridge)
 
-> "He who gives up [code] safety for [code] speed deserves neither."
-([via](https://twitter.com/hadleywickham/status/504368538874703872))
+* `df.adj`: df.adj	Calculating Adjusted Degree of Freedom (Effective Number of Parameters) in Bayesian Hierarchical GLMs
+
+* Functions for summarizing a fitted Cox survival model or cross-validation
+  * `surv.curves`
+  * `Cindex`
+  * `aucCox`
+  * `peCox`
+
+* `mc.adj`: Adjust P-values for Multiple Comparisons
+
+* `predict.bh`: Predictions for a Bayesian hierarchical model
+* `summary.bh`: Numerically Summarizing Bayesian Hierarchical Model Fits
+
+## Utility Functions
+* `plot.bh`: Graphically Summarizing Bayesian Hierarchical Model Fits
+
+* `geno.freq`: Summarizing Genotypic Data
+
+* `simulation`: Simulating Predictor Variables and Response Data and Summarizing the Analysis of Simulated Data
+
+

@@ -5,13 +5,15 @@
     "dirty" : false,
     "encoding" : "UTF-8",
     "folds" : "",
-    "hash" : "41345253",
+    "hash" : "0",
     "id" : "1FC7C32",
-    "lastKnownWriteTime" : 1550588567,
-    "last_content_update" : 1550588567,
+    "lastKnownWriteTime" : 1550594042,
+    "last_content_update" : 1550594042180,
     "path" : "~/GitHub/BhGLM/vignettes/bhglm.Rmd",
     "project_path" : "vignettes/bhglm.Rmd",
     "properties" : {
+        "cursorPosition" : "256,111",
+        "scrollLine" : "233"
     },
     "read_only" : false,
     "read_only_alternatives" : [
