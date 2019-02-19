@@ -1,10 +1,10 @@
 ---
 title: "Introduction to BhGLM"
-author: "Nengjun Yi"
+author: "Yi Nengjun"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Introduction to BhGLM}
+  %\VignetteIndexEntry{Vignette Title}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
