@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1550592319673.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "41345253",
+    "id" : "1FC7C32",
+    "lastKnownWriteTime" : 1550588567,
+    "last_content_update" : 1550588567,
+    "path" : "~/GitHub/BhGLM/vignettes/bhglm.Rmd",
+    "project_path" : "vignettes/bhglm.Rmd",
+    "properties" : {
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}
