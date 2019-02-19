@@ -16,5 +16,5 @@ install_github("nyiuab/BhGLM")
 
 or with Vignettes
 ```{r}
-install_github("nyiuab/BhGLM", ref = "Vignettes", build_opts = c("--no-resave-data", "--no-manual"))
+install_github("nyiuab/BhGLM", build_opts = c("--no-resave-data", "--no-manual"))
 ```
