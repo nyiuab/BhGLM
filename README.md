@@ -22,4 +22,4 @@ install_github("nyiuab/BhGLM")
 library(devtools)
 install_github("nyiuab/BhGLM", build_opts = c("--no-resave-data", "--no-manual"), force = T)
 ```
-3. download the BhGLM zip file to your computer, and then install it to R.
+3. Download the BhGLM zip file to your computer, and then install it to R.
