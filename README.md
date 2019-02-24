@@ -11,11 +11,13 @@ Author: Nengjun Yi <nyi@uab.edu>;  Maintainer: Nengjun Yi <nyi@uab.edu>
 # Installation
 
 Three ways to install the package in R:
+
+1. without Vignettes
 ```{r}
 library(devtools)
 install_github("nyiuab/BhGLM")
 ```
-or with Vignettes
+2. with Vignettes
 ```{r}
 install_github("nyiuab/BhGLM", build_opts = c("--no-resave-data", "--no-manual"))
 ```
