@@ -12,12 +12,14 @@ Author: Nengjun Yi <nyi@uab.edu>;  Maintainer: Nengjun Yi <nyi@uab.edu>
 
 Three ways to install the package in R:
 
-1. without Vignettes
+1. Without Vignettes
 ```{r}
 library(devtools)
 install_github("nyiuab/BhGLM")
 ```
-2. with Vignettes
+2. With Vignettes
 ```{r}
-install_github("nyiuab/BhGLM", build_opts = c("--no-resave-data", "--no-manual"))
+library(devtools)
+install_github("nyiuab/BhGLM", build_opts = c("--no-resave-data", "--no-manual"), force = T)
 ```
+3. download the BhGLM zip file to your computer, and then install it to R.
