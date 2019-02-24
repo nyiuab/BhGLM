@@ -400,7 +400,7 @@ bcoxph.fit <- function(x, y, offset = rep(0, nobs), weights = rep(1, nobs), init
   fit$method.coef <- method.coef
   if (prior == "mde" | prior == "mt") {
     fit$p <- p[unlist(group.vars)]
-    fit$theta <- theta
+    fit$ptheta <- theta
     fit$ss <- ss
   }
   
