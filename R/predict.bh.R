@@ -20,11 +20,12 @@ predict.bh <- function (object, new.x, new.y, new.offset)
   {
     if (!is.numeric(y)) stop("'new.y' must be numeric")
     lp <- predict(object, newdata=new.x) 
+    mu <- object$family$linkinv(lp)
     if (any(class(object) %in% "negbin"))
-      res <- measure.nb(lp=lp, y=y, theta=object$nb.theta, linkinv=object$family$linkinv)
+      measures <- measure.nb(pred=mu, obs=y, theta=object$theta)
     else  
-      res <- measure.glm(lp=lp, y=y, family=object$family, dispersion=object$dispersion) 
-    res <- list(lp=lp, y.fitted=res$y.fitted, measures=res$measures)
+      measures <- measure.glm(pred=mu, obs=y, family=object$family, dispersion=object$dispersion) 
+    res <- list(lp=lp, y.fitted=mu, measures=measures)
   }
   
   if (any(class(object) %in% "glmNet") | any(class(object) %in% "bmlasso"))
@@ -42,14 +43,17 @@ predict.bh <- function (object, new.x, new.y, new.offset)
     }
     lp <- as.numeric(lp)
     names(lp) <- 1:length(lp)
+    mu <- lp
+    if (family=="binomial") mu <- exp(lp)/(1 + exp(lp))
+    if (family=="poisson") mu <- exp(lp)
     if (family=="cox")
-      res <- list(lp=lp, measures=measure.cox(lp=lp, y=y))
+      res <- list(lp=lp, measures=measure.cox(pred=lp, obs=y))
     else {
       if (family=="gaussian") fa <- gaussian()
       if (family=="binomial") fa <- binomial()
       if (family=="poisson") fa <- poisson()
-      res <- measure.glm(lp=lp, y=y, family=fa, dispersion=object$dispersion)
-      res <- list(lp=lp, y.fitted=res$y.fitted, measures=res$measures)
+      measures <- measure.glm(pred=mu, obs=y, family=fa, dispersion=object$dispersion)
+      res <- list(lp=lp, y.fitted=mu, measures=measures)
     }
   }
   
@@ -57,14 +61,14 @@ predict.bh <- function (object, new.x, new.y, new.offset)
   {
     if (!is.Surv(y)) stop("'new.y' must be a Surv object")
     lp <- predict(object, newdata=new.x)  
-    res <- list(lp=lp, measures=measure.cox(lp=lp, y=y))
+    res <- list(lp=lp, measures=measure.cox(pred=lp, obs=y))
   }
   
   if (any(class(object) %in% "polr")) 
   {
     if (!is.factor(y)) stop("'new.y' must be a factor")
     pred <- predict(object, newdata=new.x, type="probs")
-    res <- list(y.fitted=pred, measures=measure.polr(pred=pred, y=y))
+    res <- list(y.fitted=pred, measures=measure.polr(pred=pred, obs=y))
   }
   
   res    
@@ -72,9 +76,10 @@ predict.bh <- function (object, new.x, new.y, new.offset)
 
 #********************************************************************
 
-measure.glm <- function (lp, y, family, dispersion = 1) 
+measure.glm <- function (pred, obs, family, dispersion = 1) 
 {
-  mu <- family$linkinv(lp)
+  y <- obs
+  mu <- pred
   family <- family$family
   if (family == "gaussian") logL <- dnorm(y, mu, sqrt(dispersion), log = TRUE)
   if (family == "binomial") logL <- dbinom(y, 1, mu, log = TRUE)
@@ -89,24 +94,23 @@ measure.glm <- function (lp, y, family, dispersion = 1)
   if (family == "gaussian") {
       R2 <- (var(y, na.rm = TRUE) - mse)/var(y, na.rm = TRUE)
       measures <- list(deviance = deviance, mse = mse, R2 = R2)
-    }
+  }
   if (family == "binomial") {
     nna <- !is.na(y)&!is.na(mu)
     auc <- roc(y[nna], mu[nna], plot = FALSE)$AUC
     misclassification <- mean(abs(y - mu) >= 0.5, na.rm = TRUE)
     measures <- list(deviance = deviance, auc = auc, mse = mse, 
-                           misclassification = misclassification)
+                     misclassification = misclassification)
   }
   
-  res <- list(y.fitted = mu, measures = unlist(measures))
-  res
+  unlist(measures)
 }
 
-measure.nb <- function (lp, y, theta = 1, linkinv) 
+measure.nb <- function (pred, obs, theta = 1) 
 {
-  mu <- linkinv(lp)
+  y <- obs
+  mu <- pred
   logL <- dnbinom(y, size = theta, mu = mu, log = TRUE)
-  
   logL <- sum(logL, na.rm = TRUE)
   deviance <- -2 * logL
   
@@ -114,24 +118,25 @@ measure.nb <- function (lp, y, theta = 1, linkinv)
   mae <- mean(abs(y - mu), na.rm = TRUE)
   measures <- list(deviance = deviance, mse = mse, mae = mae)
   
-  res <- list(y.fitted = mu, measures = unlist(measures))
-  res
+  unlist(measures)
 }
 
 
-measure.cox <- function (lp, y) 
+measure.cox <- function (pred, obs) 
 {
+  y <- obs
+  lp <- pred
   pl <- coxph(y ~ lp, init = 1, control = coxph.control(iter.max=1), method = "breslow")$loglik[1]
   nna <- !is.na(y)&!is.na(lp)
   cindex <- Cindex(y[nna], lp[nna])$cindex
   measures <- list(loglik = pl, Cindex = cindex)
-  res <- unlist(measures)
-  res
+  unlist(measures)
 }
 
 
-measure.polr <- function (pred, y) 
+measure.polr <- function (pred, obs) 
 {
+  y <- obs
   if (is.vector(pred)) pred <- t(as.matrix(pred))
   auc <- mse <- misclassification <- 0
   y.level <- levels(y)
@@ -154,9 +159,7 @@ measure.polr <- function (pred, y)
   deviance <- -2 * sum(log(L))
   
   measures <- list(deviance = deviance, auc = auc, mse = mse, misclassification = misclassification)
-  res <- unlist(measures)
-  
-  res
+  unlist(measures)
 }
 
 #***************************************************************************
