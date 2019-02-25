@@ -11,4 +11,4 @@ Description: Functions for setting up and fitting various Bayesian hierarchical 
 License: MIT
 LazyLoad: yes
 LazyData: yes
-VignetteBuilder: R.rsp
+VignetteBuilder: knitr, R.rsp
