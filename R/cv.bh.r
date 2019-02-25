@@ -63,28 +63,23 @@ cv.bh.glm <- function(object, nfolds = 10, foldid = NULL, ncv = 1, verbose = TRU
       else fit <- update(object, subset = subset1) 
       lp[omit] <- x.obj[omit, , drop = FALSE] %*% fit$coefficients
       if (!is.null(offset)) lp[omit] <- lp[omit] + offset[omit]
+      y.fitted[omit] <- object$family$linkinv(lp[omit])
       if (any(class(object) %in% "negbin")) 
-        dd <- measure.nb(lp=lp[omit], y=y.obj[omit], theta=fit$nb.theta, linkinv=object$family$linkinv)
+        dd <- measure.nb(pred=y.fitted[omit], obs=y.obj[omit], theta=fit$theta)
       else  
-        dd <- measure.glm(lp=lp[omit], y=y.obj[omit], family=object$family, dispersion=fit$dispersion) 
-      y.fitted[omit] <- dd$y.fitted
-      deviance <- c(deviance, dd$measures["deviance"])
+        dd <- measure.glm(pred=y.fitted[omit], obs=y.obj[omit], family=object$family, dispersion=fit$dispersion) 
+      deviance <- c(deviance, dd["deviance"])
       
       if (verbose) {
         j <- j + 1
         cat(j, "")
-#        J <- nfolds * ncv
-#        j <- j + 1
-#        pre <- rep("\b", J)
-#        cat(pre, "\n", j, "/", J, "\n", sep = "")
-#        flush.console()
       }
     }
     
     if (any(class(object) %in% "negbin")) 
-      measures <- measure.nb(lp=lp, y=y.obj, linkinv=object$family$linkinv)$measures
+      measures <- measure.nb(pred=y.fitted, obs=y.obj)
     else  
-      measures <- measure.glm(lp=lp, y=y.obj, family=object$family)$measures 
+      measures <- measure.glm(pred=y.fitted, obs=y.obj, family=object$family) 
     measures["deviance"] <- sum(deviance)
     
     measures0 <- rbind(measures0, measures)
@@ -160,7 +155,7 @@ cv.bh.coxph <- function(object, nfolds = 10, foldid = NULL, ncv = 1, verbose = T
       }
     }
   
-    measures <- c(sum(pl), measure.cox(lp=lp, y=y.obj))
+    measures <- c(sum(pl), measure.cox(pred=lp, obs=y.obj))
     names(measures) <- c("CVPL", "pl", "Cindex")
     
     measures0 <- rbind(measures0, measures)
@@ -234,9 +229,9 @@ cv.bh.lasso <- function(object, nfolds = 10, foldid = NULL, ncv = 1, verbose = T
       if (any(class(object) %in% "GLM")) {
         lp[omit] <- cbind(1, x.obj[omit, , drop = FALSE]) %*% fit$coefficients
         if (!is.null(offset)) lp[omit] <- lp[omit] + offset[omit]
-        dd <- measure.glm(lp=lp[omit], y=y.obj[omit], family=fa, dispersion=fit$dispersion) 
-        y.fitted[omit] <- dd$y.fitted
-        deviance <- c(deviance, dd$measures["deviance"])
+        y.fitted[omit] <- fa$linkinv(lp[omit])
+        dd <- measure.glm(pred=y.fitted[omit], obs=y.obj[omit], family=fa, dispersion=fit$dispersion) 
+        deviance <- c(deviance, dd["deviance"])
       }
       if (any(class(object) %in% "COXPH")) {
         xb <- x.obj %*% fit$coefficients 
@@ -254,11 +249,11 @@ cv.bh.lasso <- function(object, nfolds = 10, foldid = NULL, ncv = 1, verbose = T
     }
     
     if (any(class(object) %in% "GLM")) {
-      measures <- measure.glm(lp=lp, y=y.obj, family=fa)$measures 
+      measures <- measure.glm(pred=y.fitted, obs=y.obj, family=fa)
       measures["deviance"] <- sum(deviance)
     }
     if (any(class(object) %in% "COXPH")) {
-      measures <- c(sum(pl), measure.cox(lp=lp, y=y.obj))
+      measures <- c(sum(pl), measure.cox(pred=lp, obs=y.obj))
       names(measures) <- c("CVPL", "pl", "Cindex")
     }
     
@@ -331,7 +326,7 @@ cv.bh.polr <- function(object, nfolds = 10, foldid = NULL, ncv = 1, verbose = TR
       }
     }
     
-    measures <- measure.polr(pred=y.fitted, y=y.obj)
+    measures <- measure.polr(pred=y.fitted, obs=y.obj)
     
     measures0 <- rbind(measures0, measures)
     y.fitted0[[k]] <- y.fitted
