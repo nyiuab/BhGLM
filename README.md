@@ -14,14 +14,16 @@ Three ways to install the package in R:
 
 1. Without Vignettes
 ```{r}
+if (!requireNamespace("devtools")) install.packages("devtools")
 library(devtools)
 install_github("nyiuab/BhGLM")
 ```
 2. With Vignettes
 ```{r}
+if (!requireNamespace("devtools")) install.packages("devtools")
+if(!requireNamespace(R.rsp)) install.packages("R.rsp")
+if(!requireNamespace(knitr)) install.packages("knitr")
 library(devtools)
-if(!require(R.rsp)) install.packages("R.rsp")
-library(R.rsp)
 install_github("nyiuab/BhGLM", build_opts = c("--no-resave-data", "--no-manual"), force = T)
 ```
 3. Download the BhGLM zip file to your computer, and then install it to R.
