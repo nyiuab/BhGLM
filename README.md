@@ -12,15 +12,13 @@ Author: Nengjun Yi <nyi@uab.edu>;  Maintainer: Nengjun Yi <nyi@uab.edu>
 
 Three ways to install the package in R:
 
-1. Without Vignettes
+1. Without Vignettes (must install package: devtools) 
 ```{r}
-if (!requireNamespace("devtools")) install.packages("devtools")
 library(devtools)
 install_github("nyiuab/BhGLM")
 ```
-2. With Vignettes
+2. With Vignettes (must install packages: devtools, knitr, R.rsp)
 ```{r}
-if (!requireNamespace("devtools")) install.packages("devtools")
 library(devtools)
 install_github("nyiuab/BhGLM", build_opts = c("--no-resave-data", "--no-manual"), force = T)
 ```
