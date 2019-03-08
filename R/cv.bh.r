@@ -95,6 +95,7 @@ cv.bh.glm <- function(object, nfolds = 10, foldid = NULL, ncv = 1, verbose = TRU
     out$measures <- rbind(colMeans(measures0, na.rm = TRUE), apply(measures0, 2, sd, na.rm = TRUE))
     rownames(out$measures) <- c("mean", "sd")
   }
+  out$measures <- round(out$measures, digits=3)
   out$y.obs <- y.obj
   out$lp <- rowMeans(lp0, na.rm = TRUE)
   out$y.fitted <- rowMeans(y.fitted0, na.rm = TRUE)
@@ -169,6 +170,7 @@ cv.bh.coxph <- function(object, nfolds = 10, foldid = NULL, ncv = 1, verbose = T
     out$measures <- rbind(colMeans(measures0, na.rm = TRUE), apply(measures0, 2, sd, na.rm = TRUE))
     rownames(out$measures) <- c("mean", "sd")
   }
+  out$measures <- round(out$measures, digits=3)
   out$y.obs <- y.obj
   out$lp <- rowMeans(lp0, na.rm = TRUE)
   out$foldid <- foldid0
@@ -269,6 +271,7 @@ cv.bh.lasso <- function(object, nfolds = 10, foldid = NULL, ncv = 1, verbose = T
     out$measures <- rbind(colMeans(measures0, na.rm = TRUE), apply(measures0, 2, sd, na.rm = TRUE))
     rownames(out$measures) <- c("mean", "sd")
   }
+  out$measures <- round(out$measures, digits=3)
   out$y.obs <- y.obj
   out$lp <- rowMeans(lp0, na.rm = TRUE)
   out$y.fitted <- rowMeans(y.fitted0, na.rm = TRUE)
@@ -339,6 +342,7 @@ cv.bh.polr <- function(object, nfolds = 10, foldid = NULL, ncv = 1, verbose = TR
     out$measures <- rbind(colMeans(measures0, na.rm = TRUE), apply(measures0, 2, sd, na.rm = TRUE))
     rownames(out$measures) <- c("mean", "sd")
   }
+  out$measures <- round(out$measures, digits=3)
   out$y.obs <- y.obj
   out$y.fitted <- array(0, c(n, length(levels(y.obj))))
   for (k in 1:ncv) out$y.fitted <- out$y.fitted + y.fitted0[[k]]/ncv 
