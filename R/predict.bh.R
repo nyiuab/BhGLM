@@ -97,7 +97,7 @@ measure.glm <- function (pred, obs, family, dispersion = 1)
   }
   if (family == "binomial") {
     nna <- !is.na(y)&!is.na(mu)
-    auc <- roc(y[nna], mu[nna], plot = FALSE)$AUC
+    auc <- ROC(y[nna], mu[nna], plot = FALSE)$AUC
     misclassification <- mean(abs(y - mu) >= 0.5, na.rm = TRUE)
     measures <- list(deviance = deviance, auc = auc, mse = mse, 
                      misclassification = misclassification)
@@ -142,7 +142,7 @@ measure.polr <- function (pred, obs)
   y.level <- levels(y)
   for (k in 1:NCOL(pred)) {
     y1 <- ifelse(y == y.level[k], 1, 0)
-    auc <- auc + roc(y1, pred[, k], plot = FALSE)$AUC
+    auc <- auc + ROC(y1, pred[, k], plot = FALSE)$AUC
     misclassification <- misclassification + mean(abs(y1 - pred[, k]) > 0.5, na.rm = TRUE)
     mse <- mse + mean((y1 - pred[, k])^2, na.rm = TRUE)
   }
