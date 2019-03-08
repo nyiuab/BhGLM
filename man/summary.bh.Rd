@@ -12,15 +12,17 @@ This function is to numerically summarize the results of the function \code{\lin
 }
 
 \usage{
-summary.bh(object)  
+summary.bh(object, digits = 3)  
 }
 
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{object}{ 
-  an object from \code{\link{bglm}}, \code{\link{bpolr}}, or \code{\link{bcoxph}}. 
-}
-  
+  an object from \code{\link{bglm}}, \code{\link{bpolr}}, or \code{\link{bcoxph}}.
+  }
+  \item{digits}{
+  integer indicating the number of decimal places and significant digits to be used. 
+  }
 }
 
 \details{
