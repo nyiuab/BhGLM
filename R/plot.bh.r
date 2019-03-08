@@ -9,9 +9,9 @@ plot.bh <- function(object = NULL, coefs, sds = NULL, pvalues = NULL, vars.rm = 
   if (!is.null(object)) {
     out <- summary.bh(object) 
     if(!is.null(vars.rm)) out <- out[-vars.rm, , drop = FALSE]
-    coefs <- out[, 1]
-    sds <- out[, 2]
-    pvalues <- out[, 3]
+    coefs <- out[, "coef"]
+    sds <- out[, "se(coef)"]
+    pvalues <- out[, "pvalue"]
   }
   if (is.null(names(coefs))) {
     names(coefs) <- paste("v", 1:length(coefs), sep = "")
