@@ -4,9 +4,11 @@
 #*****************************************************************
 # used in predict.bh and cv.bh
 
-roc <- function(dn, pre, m = 100, plot = TRUE, add = FALSE, xlab = "False positive rate", ylab = "True positive rate",
-                lwd = 2, lty = 1, col = "black", type = "s", pch = 20)
+ROC <- function(obs, pred, m=100, plot=TRUE, add=FALSE, xlab="False positive rate", ylab="True positive rate",
+                lwd=2, lty=1, col="black", type="s", pch=20)
 {
+  dn <- obs
+  pre <- pred
   # draw roc curve
   n <- length(dn)                   # sample size
   d <- length(dn[dn != 0])          # number of disease (dn=1)
