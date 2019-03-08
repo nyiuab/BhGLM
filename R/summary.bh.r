@@ -1,13 +1,13 @@
 
-summary.bh <- function (object)
+summary.bh <- function (object, digits = 3)
 {
-  if (any(class(object) == "glm")) res <- summary.bglm(object)
-  if (any(class(object) == "coxph")) res <- summary.bcoxph(object)
-  if (any(class(object) == "polr")) res <- summary.bpolr(object)
+  if (any(class(object) == "glm")) res <- summary.bglm(object, digits=digits)
+  if (any(class(object) == "coxph")) res <- summary.bcoxph(object, digits=digits)
+  if (any(class(object) == "polr")) res <- summary.bpolr(object, digits=digits)
   res
 }
 
-summary.bglm <- function (object)
+summary.bglm <- function (object, digits)
 {
   if (is.null(object$method.coef)) object$method.coef <- "joint"
   if (object$method.coef == "joint") 
@@ -27,18 +27,20 @@ summary.bglm <- function (object)
     lower.95 <- exp(res[, 1] - 2 * res[, 2])
     upper.95 <- exp(res[, 1] + 2 * res[, 2])
     OR <- cbind(OR, lower.95, upper.95)
-    res <- cbind(res, OR)
+    res <- cbind(res[, 1:2], OR, res[,3])
   }
   
   if (ncol(res) == 3)
     colnames(res) <- c("coef", "se(coef)", "pvalue")
   if (ncol(res) == 6)
-    colnames(res) <- c("coef", "se(coef)", "pvalue", "exp(coef)", "lower.95", "upper.95")
+    colnames(res) <- c("coef", "se(coef)", "exp(coef)", "lower.95", "upper.95", "pvalue")
+  res <- cbind(round(res[, 1:(ncol(res)-1), drop=FALSE], digits=digits),
+               signif(res[, ncol(res), drop=FALSE], digits=digits))
   
   return(res)
 }
 
-summary.bcoxph <- function (object)
+summary.bcoxph <- function (object, digits)
 {
   if (is.null(object$method.coef)) object$method.coef <- "joint"
   if (object$method.coef == "joint") {
@@ -70,11 +72,13 @@ summary.bcoxph <- function (object)
   }
   
   colnames(res) <- c("coef", "se(coef)", "pvalue", "exp(coef)", "lower.95", "upper.95")
-  
+  res <- res[,c("coef", "se(coef)", "exp(coef)", "lower.95", "upper.95", "pvalue"), drop = FALSE]
+  res <- cbind(round(res[, 1:(ncol(res)-1), drop=FALSE], digits=digits),
+               signif(res[, ncol(res), drop=FALSE], digits=digits))
   return(res)
 }
 
-summary.bpolr <- function (object)
+summary.bpolr <- function (object, digits)
 {
   require(MASS)
   out <- summary(object)$coefficients[names(object$coefficients), , drop = FALSE]
@@ -89,7 +93,9 @@ summary.bpolr <- function (object)
   res <- cbind(out, OR)
 
   colnames(res) <- c("coef", "se(coef)", "pvalue", "exp(coef)", "lower.95", "upper.95")
-  
+  res <- res[,c("coef", "se(coef)", "exp(coef)", "lower.95", "upper.95", "pvalue"), drop = FALSE]
+  res <- cbind(round(res[, 1:(ncol(res)-1), drop=FALSE], digits=digits),
+               signif(res[, ncol(res), drop=FALSE], digits=digits))
   return(res)
 }
 
