@@ -103,7 +103,7 @@ measure.glm <- function (pred, obs, family, dispersion = 1)
                      misclassification = misclassification)
   }
   
-  unlist(measures)
+  round(unlist(measures), digits=3)
 }
 
 measure.nb <- function (pred, obs, theta = 1) 
@@ -118,7 +118,7 @@ measure.nb <- function (pred, obs, theta = 1)
   mae <- mean(abs(y - mu), na.rm = TRUE)
   measures <- list(deviance = deviance, mse = mse, mae = mae)
   
-  unlist(measures)
+  round(unlist(measures), digits=3)
 }
 
 
@@ -130,7 +130,7 @@ measure.cox <- function (pred, obs)
   nna <- !is.na(y)&!is.na(lp)
   cindex <- Cindex(y[nna], lp[nna])$cindex
   measures <- list(loglik = pl, Cindex = cindex)
-  unlist(measures)
+  round(unlist(measures), digits=3)
 }
 
 
@@ -159,7 +159,7 @@ measure.polr <- function (pred, obs)
   deviance <- -2 * sum(log(L))
   
   measures <- list(deviance = deviance, auc = auc, mse = mse, misclassification = misclassification)
-  unlist(measures)
+  round(unlist(measures), digits=3)
 }
 
 #***************************************************************************
