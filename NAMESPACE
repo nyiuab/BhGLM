@@ -12,7 +12,6 @@ export(plot.bh)
 
 export(cv.bh)
 export(predict.bh)
-export(ROC)
 
 export(mc.adj)
 export(df.adj)
@@ -30,7 +29,7 @@ export(sim.y)
 export(sim.eta)
 export(sim.out)
 
-
+export(ROC)
 export(surv.curves)
 export(Cindex)
 export(aucCox)
