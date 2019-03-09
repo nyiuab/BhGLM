@@ -4,7 +4,7 @@
 \alias{functions_Cox}
 
 \title{
-Functions for assessing Cox models
+Functions for Assessing Cox Models
 }
 
 \description{
