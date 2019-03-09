@@ -4,7 +4,7 @@
 \alias{bcoxph}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-  Bayesian Cox Survial Model
+  Bayesian Cox Survial Models
 }
 
 \description{
