@@ -4,7 +4,7 @@
 \alias{bcoxph}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-  Bayesian Hierarchical Cox Proportonal Hazards Model
+  Bayesian Cox Survial Model
 }
 
 \description{
