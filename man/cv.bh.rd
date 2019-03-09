@@ -4,7 +4,7 @@
 \alias{cv.bh}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Cross-Validation for Bayesian Hierarchical GLMs and Cox Model or Elastic Net (including Lasso and Ridge)
+Cross-Validation for Bayesian Models or Elastic Net
 }
 
 \description{
