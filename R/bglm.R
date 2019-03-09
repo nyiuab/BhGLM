@@ -82,7 +82,7 @@ bglm <- function (formula, family = gaussian, data, offset, weights, subset, na.
            contrasts = attr(X, "contrasts"), xlevels = .getXlevels(mt, mf), prior = prior) )
     
   class(fit) <- c("glm", "lm")
-  if (!is.null(fit$nb.theta)) class(fit) <- c("negbin", "glm", "lm")
+  if (!is.null(fit$theta)) class(fit) <- c("negbin", "glm", "lm")
   stop.time <- Sys.time()
   minutes <- round(difftime(stop.time, start.time, units = "min"), 3)
   if (verbose) {
@@ -468,7 +468,7 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
     
     if (prior == "mde" | prior == "mt") {
       out$p <- p[unlist(group.vars)]
-      out$theta <- theta
+      out$ptheta <- theta
       out$ss <- ss
     }
     

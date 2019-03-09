@@ -44,7 +44,7 @@ bnegbin.fit <- function(x, y, weights = rep(1, nobs), start = NULL, etastart = N
     }
   }   # theta.ml can stop sometimes!
   if (Warning & (iter == control$maxit)) warning("alternation limit reached")
-  fit$nb.theta <- family$theta 
+  fit$theta <- family$theta 
   fit$iter <- iter
   fit$family <- family
 
