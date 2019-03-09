@@ -4,7 +4,7 @@
 \alias{df.adj}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Calculating Adjusted Degree of Freedom (Effective Number of Parameters) in Bayesian Hierarchical GLMs
+Calculating Adjusted Degree of Freedom
 }
 
 \description{
