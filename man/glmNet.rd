@@ -4,7 +4,7 @@
 \alias{glmNet}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-  Fit a GLM or Cox Model with lasso or elastic net
+  Fit a GLM or Cox Model with Lasso or Elastic Net
 }
 
 \description{
