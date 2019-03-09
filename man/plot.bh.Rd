@@ -4,7 +4,7 @@
 \alias{plot.bh}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Graphically Summarizing Bayesian Hierarchical Model Fits
+Graphically Summarizing Bayesian Model Fits
 }
 
 \description{
