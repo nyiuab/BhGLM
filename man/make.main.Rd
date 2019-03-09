@@ -4,7 +4,7 @@
 \alias{make.main}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-  Making Design Matrix of Main Effects from Genotypic Data of Genetic Markers
+  Making Design Matrix of Main Effects from Genotypic Data
 }
 
 \description{

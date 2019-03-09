@@ -4,7 +4,7 @@
 \alias{predict.bh}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Predictions for a Bayesian hierarchical model
+Predictions for Bayesian Hierarchical Models
 }
 
 \description{

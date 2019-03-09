@@ -4,7 +4,7 @@
 \alias{summary.bh}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-  Numerically Summarizing Bayesian Hierarchical Model Fits
+  Numerically Summarizing Bayesian Model Fits
 }
 
 \description{

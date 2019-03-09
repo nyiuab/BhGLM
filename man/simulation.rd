@@ -4,11 +4,11 @@
 \alias{simulation}
 
 \title{
-Simulating Predictor Variables and Response Data and Summarizing the Analysis of Simulated Data
+Simulating Predictors and Response Data
 }
 
 \description{
-These functions simulate predictor variables and response outcomes and summarize the analysis of simulated data.  
+These functions simulate predictor variables and response outcomes, and summarize the analysis of simulated data.  
 }
 
 \usage{
