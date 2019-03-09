@@ -4,7 +4,7 @@
 \alias{bpolr}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-  Bayesian Hierarchical Ordered Logistic or Probit Regressions for Ordinal Response
+  Bayesian Ordinal Models
 }
 
 \description{
