@@ -29,7 +29,7 @@ export(sim.y)
 export(sim.eta)
 export(sim.out)
 
-export(ROC)
+export(roc.auc)
 export(surv.curves)
 export(Cindex)
 export(aucCox)
