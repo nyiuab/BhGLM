@@ -4,7 +4,7 @@
 \alias{bglm}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-  Bayesian Hierarchical Generalized Linear Models (GLMs)
+  Bayesian Generalized Linear Models (GLMs)
 }
 
 \description{
