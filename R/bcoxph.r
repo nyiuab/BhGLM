@@ -5,6 +5,7 @@ bcoxph <- function (formula, data, weights, subset, na.action, init,
                     prior.sd = 0.5, prior.scale = 0.5, prior.df = 1, prior.mean = 0, ss = c(0.04, 0.5), 
                     Warning = FALSE, verbose = TRUE, ...) 
 {
+  if (!requireNamespace("survival")) install.packages("survival")
     require(survival)
     start.time <- Sys.time()
     prior <- prior[1]

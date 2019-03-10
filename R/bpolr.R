@@ -5,6 +5,7 @@ bpolr <- function (formula, data, weights, start, subset, na.action,
                    prior.mean = 0, prior.scale = 0.5, prior.df = 1, 
                    verbose = TRUE, ...) 
 {
+  if (!requireNamespace("MASS")) install.packages("MASS")
     library(MASS)
     start.time <- Sys.time()
     

@@ -7,6 +7,7 @@ bnegbin.fit <- function(x, y, weights = rep(1, nobs), start = NULL, etastart = N
                    prior = "de", group = NULL, method.coef = 1, dispersion = 1, prior.mean = 0, prior.sd = 0.5,
                    prior.scale = 1, prior.df = 1, ss = c(0.05, 0.1), Warning = FALSE)
 {
+  if (!requireNamespace("MASS")) install.packages("MASS")
   library(MASS)
   nobs <- NROW(y)
   if (is.null(weights)) weights <- rep.int(1, nobs)

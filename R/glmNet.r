@@ -6,6 +6,7 @@ glmNet <- function (x, y, family = c("gaussian", "binomial", "poisson", "cox"),
                     alpha = c(1, 0.5, 0), lambda, penalty.factor = rep(1, ncol(x)), 
                     nfolds = 10, ncv = 10, verbose = TRUE)
 {
+  if (!requireNamespace("glmnet")) install.packages("glmnet")
   require(glmnet)
   start.time <- Sys.time()
   call <- match.call()

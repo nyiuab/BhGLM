@@ -2,20 +2,20 @@
 
 #*******************************************************************************
 
-surv.curves <- function (y, lp, probs = 0.50, main = " ", lwd = 2, lty = 1, 
-                         col = c(3, 4), add = FALSE) 
+surv.curves <- function (y, lp, probs=0.50, mark.time=TRUE, main=" ", 
+                         lwd=2, lty=1, col=c(3, 4), add=FALSE) 
 {
   library(survival)
   group = as.numeric(cut(lp, c(-Inf, quantile(lp, probs = probs), Inf)))   
   sf = survfit(y ~ group)
   if (!add)
-    plot(sf, conf.int = FALSE, mark.time = TRUE, main = main, lwd = lwd, lty = lty, col = col, 
-         xlab = "Time", ylab = "Survival probability")
+    plot(sf, conf.int=FALSE, mark.time=mark.time, main=main, lwd=lwd, lty=lty, pch=pch, col=col, 
+         xlab="Time", ylab="Survival probability")
   else
-    lines(sf, conf.int = FALSE, mark.time = TRUE, lwd = lwd, lty = lty, col = col)
+    lines(sf, conf.int=FALSE, mark.time=mark.time, lwd=lwd, lty=lty, pch=pch, col=col)
   logrank = survdiff(y ~ group)
-  p = signif(pchisq(logrank$chisq, df = length(unique(group))-1, lower.tail = F), digits = 3)
-  legend("topright", paste("p =", p), bty = "n")
+  p = signif(pchisq(logrank$chisq, df=length(unique(group))-1, lower.tail=F), digits=3)
+  legend("topright", paste("p =", p), cex = 0.8, bty = "n")
   return(logrank)
 }
 
@@ -81,6 +81,7 @@ aucCox <- function (y, lp, main = " ", lwd = 2, lty = 1, col = "black", add = FA
 # the following functions need the package dynpred
 peCox <- function (y, lp, FUN = c("Brier", "KL"), main = "", lwd = 2, lty = 1, col = "black", add = FALSE) 
 {
+    if (!requireNamespace("dynpred")) install.packages("dynpred")
     library(dynpred)
     FUN <- FUN[1]
     time <- y[, 1]

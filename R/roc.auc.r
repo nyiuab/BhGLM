@@ -1,7 +1,7 @@
 
 roc.auc <- function(y, y.fitted, main = " ", xlab="False positive rate", ylab="True positive rate",
                 lwd=2, lty=1, col="black", type="s", pch=20, m=100,
-                plot=TRUE, add=FALSE)
+                plot=TRUE, add=FALSE, legend=TRUE)
 {
   dn <- y
   pre <- y.fitted
@@ -60,9 +60,16 @@ roc.auc <- function(y, y.fitted, main = " ", xlab="False positive rate", ylab="T
     se <- sqrt(se)
     z <- (auc - 0.5) / se             # z score
     p <- 2 * pnorm(-abs(z))           # p-value for two-tailed test
-    lci <- auc - 1.96 * se            # left boundary of 95% confidence interval
-    rci <- auc + 1.96 * se            # right boundary of 95% confidence interval
   }
-  w = list(AUC=auc, se=se, ci=c(lci, rci), pvalue=p)
-  w
+  auc <- round(auc, digits=3)
+  se <- round(se, digits=3)
+  p <- signif(p, digits=3)
+  
+  if (!plot) legend <- FALSE
+  if (legend){
+    legend("right", paste("AUC =", auc), cex=0.8, bty="n")
+    legend("bottomright", paste("p =", p), cex=0.8, bty="n")
+  }
+  
+  list(auc=auc, se=se, pvalue=p)
 }

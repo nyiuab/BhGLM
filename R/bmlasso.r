@@ -5,6 +5,7 @@ bmlasso <- function(x, y, family = c("gaussian", "binomial", "poisson", "cox"), 
                     prior = c("mde", "mt"), prior.df = 1, ss = c(0.04, 0.5),
                     Warning = FALSE, verbose = TRUE) 
 {
+  if (!requireNamespace("glmnet")) install.packages("glmnet")
   require(glmnet)
   start.time <- Sys.time()
   call <- match.call()
@@ -162,7 +163,7 @@ bmlasso.fit <- function(x, y, family = "gaussian", weights = rep(1, nrow(x)), of
   f$ungroup.vars <- ungroup.vars
   if (prior == "mde" | prior == "mt") {
     f$p <- p[unlist(group.vars)]
-    f$theta <- theta
+    f$ptheta <- theta
   }
   f$init <- init
   f$aic <- deviance(f) + 2 * f$df
