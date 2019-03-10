@@ -12,7 +12,7 @@ This function calculates AUC and ROC curves for logistic models.
 }
 
 \usage{
-roc.auc(y, y.fitted, main = " ", xlab="False positive rate", ylab="True positive rate", lwd=2, lty=1, col="black", type="s", pch=20, m=100, plot=TRUE, add=FALSE)
+roc.auc(y, y.fitted, main = " ", xlab="False positive rate", ylab="True positive rate", lwd=2, lty=1, col="black", type="s", pch=20, m=100, plot=TRUE, add=FALSE, legend=TRUE)
 }
 
 \arguments{
@@ -22,15 +22,18 @@ roc.auc(y, y.fitted, main = " ", xlab="False positive rate", ylab="True positive
   \item{y.fitted}{ 
   a vector of fitted values (probabilities). 
   }
+  \item{main, xlab, ylab, lwd, lty, col, type, pch}{ 
+  same as in \code{\link[graphics]{plot}}.
+  }
   \item{plot}{
   logical. if \code{TRUE}, plot ROC curve.
   }
   \item{add}{
   logical. if \code{TRUE}, plot over the existing plot. 
   }
-  \item{main, xlab, ylab, lwd, lty, col, type, pch}{ 
-  same as in \code{\link[graphics]{plot}}.
-}
+  \item{legend}{
+  logical. if \code{TRUE}, show auc and pvlaue. 
+  }
 }
 
 \details{
@@ -38,7 +41,7 @@ roc.auc(y, y.fitted, main = " ", xlab="False positive rate", ylab="True positive
 }
 
 \value{ 
-It returns AUC, its standard error (se), confidence interval (ci), and p value for testing AUC=0.5, and displays ROC curve.  
+It returns auc, its standard error (se), and p value for testing auc=0.5, and displays ROC curve.  
 }
 
 \references{

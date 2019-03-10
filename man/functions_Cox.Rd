@@ -12,7 +12,7 @@ These functions display survival curves, C-index,  AUC over time, and prediction
 }
 
 \usage{
-surv.curves(y, lp, probs = 0.50, main = " ", lwd = 2, lty = 1, col = c("black", "red"), add = FALSE) 
+surv.curves(y, lp, probs = 0.50, mark.time = FALSE, main = " ", lwd = 2, lty = 1, col = c("black", "red"), add = FALSE) 
 
 Cindex(y, lp)
 
@@ -30,6 +30,9 @@ peCox(y, lp, FUN = c("Brier", "KL"), main = "", lwd = 2, lty = 1, col = "black",
   }
   \item{probs}{ 
   numeric value or vector of probabilities with values in [0,1] for grouping the patients based on \code{lp}. Default \code{probs = 0.50}: partition samples to two groups according to the percentile of 50% of \code{lp}.   
+  }
+  \item{mark.time}{ 
+  controls the labeling of the curves. If set to FALSE, no labeling is done. If TRUE, then curves are marked at each censoring time.
   }
   \item{FUN}{
   The error function, either "KL" (default) for Kullback-Leibler or "Brier" for Brier score.
