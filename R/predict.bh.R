@@ -81,9 +81,17 @@ measure.glm <- function (pred, obs, family, dispersion = 1)
   y <- obs
   mu <- pred
   family <- family$family
-  if (family == "gaussian") logL <- dnorm(y, mu, sqrt(dispersion), log = TRUE)
-  if (family == "binomial") logL <- dbinom(y, 1, mu, log = TRUE)
-  if (family == "poisson") logL <- dpois(y, mu, log = TRUE)
+  if (family=="gaussian") 
+    logL <- dnorm(y, mu, sqrt(dispersion), log = TRUE)
+  if (family=="binomial" | family=="quasibinomial") 
+    logL <- dbinom(y, 1, mu, log = TRUE)
+  if (family=="poisson" | family=="quasipoisson") 
+    logL <- dpois(y, mu, log = TRUE)
+  if (family == "Gamma") {
+    library(MASS)
+    shape <- gamma.shape(model)$alpha
+    logL <- dgamma(y, shape=shape, scale=fitted(model, type="response"), log=TRUE)
+  }
     
   logL <- sum(logL, na.rm = TRUE)
   deviance <- -2 * logL
@@ -91,11 +99,11 @@ measure.glm <- function (pred, obs, family, dispersion = 1)
   mse <- mean((y - mu)^2, na.rm = TRUE)
   mae <- mean(abs(y - mu), na.rm = TRUE)
   measures <- list(deviance = deviance, mse = mse, mae = mae)
-  if (family == "gaussian") {
+  if (family=="gaussian") {
       R2 <- (var(y, na.rm = TRUE) - mse)/var(y, na.rm = TRUE)
       measures <- list(deviance = deviance, mse = mse, R2 = R2)
   }
-  if (family == "binomial") {
+  if (family=="binomial" | family=="quasibinomial") {
     nna <- !is.na(y)&!is.na(mu)
     auc <- roc.auc(y[nna], mu[nna], plot = FALSE)$auc
     misclassification <- mean(abs(y - mu) >= 0.5, na.rm = TRUE)
