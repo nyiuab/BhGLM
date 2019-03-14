@@ -13,7 +13,6 @@ bnegbin.fit <- function(x, y, weights = rep(1, nobs), start = NULL, etastart = N
   if (is.null(weights)) weights <- rep.int(1, nobs)
   off <- offset
   if (is.null(offset)) off <- rep.int(0, nobs)
-#  th <- glm.nb(y ~ offset(off) + 1, weights = weights)$theta + 0.5 # initial value of theta
   th <- NegBin()$theta
   
   devold <- -100
@@ -25,7 +24,7 @@ bnegbin.fit <- function(x, y, weights = rep(1, nobs), start = NULL, etastart = N
                   family = family, control = glm.control(maxit = 2), intercept = TRUE,
                   prior = prior, group = group, method.coef = method.coef,
                   dispersion = dispersion, prior.mean = prior.mean, prior.sd = prior.sd,
-                  prior.scale = prior.scale, prior.df = prior.df, Warning = FALSE) )
+                  prior.scale = prior.scale, prior.df = prior.df, ss = ss, Warning = FALSE) )
     start <- fit$coefficients
     etastart <- fit$linear.predictors
     prior.sd <- fit$prior.sd
