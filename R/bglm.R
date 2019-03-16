@@ -56,25 +56,14 @@ bglm <- function (formula, family = gaussian, data, offset, weights, subset, na.
   mustart <- model.extract(mf, "mustart")
   etastart <- model.extract(mf, "etastart")
   
-  if (family[[1]] != NegBin()[[1]]) {
-    fit <- bglm.fit(x = X, y = Y, weights = weights, start = start,
+  fit <- bglm.fit(x = X, y = Y, weights = weights, start = start,
                   etastart = etastart, mustart = mustart, offset = offset, 
                   family = family, control = control, intercept = attr(mt, "intercept") > 0,
                   prior = prior, group = group, method.coef = method.coef, 
                   dispersion = dispersion, prior.mean = prior.mean, prior.sd = prior.sd, 
                   prior.scale = prior.scale, prior.df = prior.df, ss = ss, 
                   Warning = Warning)
-  }
-  else {
-    fit <- bnegbin.fit(x = X, y = Y, weights = weights, start = start,
-                  etastart = etastart, mustart = mustart, offset = offset, 
-                  control = control, intercept = attr(mt, "intercept") > 0,
-                  prior = prior, group = group, method.coef = method.coef, 
-                  dispersion = dispersion, prior.mean = prior.mean, prior.sd = prior.sd, 
-                  prior.scale = prior.scale, prior.df = prior.df, ss = ss,
-                  Warning = Warning)
-  }
-
+  
   fit$model <- mf
   fit$na.action <- attr(mf, "na.action")
   fit <- c(fit, list(call = call, formula = formula, terms = mt,
@@ -82,7 +71,7 @@ bglm <- function (formula, family = gaussian, data, offset, weights, subset, na.
            contrasts = attr(X, "contrasts"), xlevels = .getXlevels(mt, mf), prior = prior) )
     
   class(fit) <- c("glm", "lm")
-  if (!is.null(fit$theta)) class(fit) <- c("negbin", "glm", "lm")
+  if (family[[1]]==NegBin()[[1]]) class(fit) <- c("negbin", "glm", "lm")
   stop.time <- Sys.time()
   minutes <- round(difftime(stop.time, start.time, units = "min"), 3)
   if (verbose) {
@@ -136,6 +125,14 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
       theta <- rep(0.5, length(group.vars))
       p <- rep(0.5, length(prior.sd))
       names(p) <- names(prior.sd)
+    }
+    
+    # for negative binomial model
+    nb <- FALSE
+    if (family[[1]] == NegBin()[[1]]) nb <- TRUE
+    if (nb){
+      if (!requireNamespace("MASS")) install.packages("MASS")
+      library(MASS)
     }
        
 #********************************************      
@@ -311,7 +308,6 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
             fit$coefficients <- coefs.hat
           }
             
-                                 
 #            start[fit$pivot] <- fit$coefficients
             start <- fit$coefficients 
             eta <- drop(x %*% start)
@@ -372,6 +368,25 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
             if (s.glm == "truncated") dispersion <- (dispersion + dispersionold)/2
             dispersion <- ifelse(dispersion > 1e+04,1e+04, dispersion) 
             dispersion <- ifelse(dispersion < 1e-04, 1e-04, dispersion)
+            
+            if(nb)  # for negative binomial model
+            {
+              th <- suppressWarnings( theta.ml(y=y, mu=mu, n=sum(weights), weights=weights, limit=10, trace=FALSE) )
+              if (is.null(th)) th <- family$theta 
+              family <- NegBin(theta = th)
+              
+              variance <- family$variance
+              dev.resids <- family$dev.resids
+              aic <- family$aic
+              linkinv <- family$linkinv
+              mu.eta <- family$mu.eta
+              valideta <- family$valideta
+              if (is.null(valideta))
+                valideta <- function(eta) TRUE
+              validmu <- family$validmu
+              if (is.null(validmu))
+                validmu <- function(mu) TRUE
+            }
 
             if (iter > 2 & abs(dev - devold)/(0.1 + abs(dev)) < control$epsilon) {
                 conv <- TRUE
@@ -398,7 +413,7 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
               if (any(mu > 1 - eps) || any(mu < eps))
                   warning("fitted probabilities numerically 0 or 1 occurred", call. = FALSE)
           }
-          if (family$family == "poisson") {
+          if (family$family == "poisson" | nb) {
               if (any(mu < eps))
                   warning("fitted rates numerically 0 occurred", call. = FALSE)
           }
@@ -463,17 +478,14 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
                 ungroup.vars = ungroup.vars, method.coef = method.coef, family = family )
     
     if (prior == "t" | prior == "mt") out$prior.df <- prior.df
-    
-#    if (!is.null(linked.vars)) out$linked.vars <- linked.vars
-    
     if (prior == "mde" | prior == "mt") {
       out$p <- p[unlist(group.vars)]
       out$ptheta <- theta
       out$ss <- ss
     }
+    if (nb) out$theta <- th
     
     return(out)
-
 }
 
 #*******************************************************************************
@@ -532,6 +544,60 @@ truncated <- function(y, s.x, eta, Sd) #for extreme phenotype sampling
   out <- list(z = z, w = w)
   out
 }  
+
+
+# from MASS
+NegBin <- function (theta = 3, link = "log")
+{
+  linktemp <- substitute(link)
+  if (!is.character(linktemp))
+    linktemp <- deparse(linktemp)
+  if (linktemp %in% c("log", "identity", "sqrt"))
+    stats <- make.link(linktemp)
+  else if (is.character(link)) {
+    stats <- make.link(link)
+    linktemp <- link
+  }
+  else {
+    if (inherits(link, "link-glm")) {
+      stats <- link
+      if (!is.null(stats$name))
+        linktemp <- stats$name
+    }
+    else stop(gettextf("\"%s\" link not available for negative binomial family; available links are \"identity\", \"log\" and \"sqrt\"",
+                       linktemp))
+  }
+  .Theta <- theta
+  env <- new.env(parent = .GlobalEnv)
+  assign(".Theta", theta, envir = env)
+  variance <- function(mu) mu + mu^2/.Theta
+  validmu <- function(mu) all(mu > 0)
+  dev.resids <- function(y, mu, wt) 2 * wt * (y * log(pmax(1,
+                                                           y)/mu) - (y + .Theta) * log((y + .Theta)/(mu + .Theta)))
+  aic <- function(y, n, mu, wt, dev) {
+    term <- (y + .Theta) * log(mu + .Theta) - y * log(mu) +
+      lgamma(y + 1) - .Theta * log(.Theta) + lgamma(.Theta) -
+      lgamma(.Theta + y)
+    2 * sum(term * wt)
+  }
+  initialize <- expression({
+    if (any(y < 0)) stop("negative values not allowed for the negative binomial family")
+    n <- rep(1, nobs)
+    mustart <- y + (y == 0)/6
+  })
+  simfun <- function(object, nsim) {
+    ftd <- fitted(object)
+    rnegbin(nsim * length(ftd), ftd, .Theta)
+  }
+  environment(variance) <- environment(validmu) <- environment(dev.resids) <- environment(aic) <- environment(simfun) <- env
+  famname <- paste("NegBin(", format(round(theta,
+                                           4)), ")", sep = "")
+  structure(list(family = famname, link = linktemp, linkfun = stats$linkfun,
+                 linkinv = stats$linkinv, variance = variance, dev.resids = dev.resids,
+                 aic = aic, mu.eta = stats$mu.eta, initialize = initialize,
+                 validmu = validmu, valideta = stats$valideta, simulate = simfun, theta = .Theta),
+            class = "family")
+}
 
 #*******************************************************************************
 
