@@ -21,29 +21,35 @@ surv.curves <- function (y, lp, probs=0.50, mark.time=TRUE, main=" ",
 
 Cindex <- function (y, lp) 
 {
-  time <- y[, 1]
-  status <- y[, 2]
-  x <- lp
-  n <- length(time)
-  ord <- order(time, -status)
-  time <- time[ord]
-  status <- status[ord]
-  x <- x[ord]
-  wh <- which(status == 1)
-  total <- concordant <- 0
-  for (i in wh) {
-    for (j in ((i + 1):n)) {
-      tt <- (time[j] > time[i])
-      if (is.na(tt)) tt <- FALSE
-      if (tt) {
-        total <- total + 1
-        if (x[j] < x[i]) concordant <- concordant + 1
-        if (x[j] == x[i]) concordant <- concordant + 0.5
-      }
-    }
-  }
-  return(list(concordant = concordant, total = total, cindex = concordant/total))
+  ff <- bcoxph(y ~ lp, prior.scale=0, prior.mean=1, verbose=FALSE)
+  summary(ff)$concordance
 }
+
+#Cindex <- function (y, lp) # very slow for large data
+#{
+#  time <- y[, 1]
+#  status <- y[, 2]
+#  x <- lp
+#  n <- length(time)
+#  ord <- order(time, -status)
+#  time <- time[ord]
+#  status <- status[ord]
+#  x <- x[ord]
+#  wh <- which(status == 1)
+#  total <- concordant <- 0
+#  for (i in wh) {
+#    for (j in ((i + 1):n)) {
+#      tt <- (time[j] > time[i])
+#      if (is.na(tt)) tt <- FALSE
+#      if (tt) {
+#        total <- total + 1
+#        if (x[j] < x[i]) concordant <- concordant + 1
+#        if (x[j] == x[i]) concordant <- concordant + 0.5
+#      }
+#    }
+#  }
+#  return(list(concordant = concordant, total = total, cindex = concordant/total))
+#}
 
 
 aucCox <- function (y, lp, main = " ", lwd = 2, lty = 1, col = "black", add = FALSE) 

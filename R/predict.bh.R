@@ -80,6 +80,8 @@ measure.glm <- function (pred, obs, family, dispersion = 1)
 {
   y <- obs
   mu <- pred
+  if (is.character(family)) family <- get(family, mode="function", envir=parent.frame())
+  if (is.function(family)) family <- family()
   family <- family$family
   if (family=="gaussian") 
     logL <- dnorm(y, mu, sqrt(dispersion), log = TRUE)
@@ -134,9 +136,12 @@ measure.cox <- function (pred, obs)
 {
   y <- obs
   lp <- pred
-  pl <- coxph(y ~ lp, init = 1, control = coxph.control(iter.max=1), method = "breslow")$loglik[1]
-  nna <- !is.na(y)&!is.na(lp)
-  cindex <- Cindex(y[nna], lp[nna])$cindex
+#  pl <- coxph(y ~ lp, init = 1, control = coxph.control(iter.max=1), method = "breslow")$loglik[1]
+#  nna <- !is.na(y)&!is.na(lp)
+#  cindex <- Cindex(y[nna], lp[nna])$cindex
+  ff <- bcoxph(y ~ lp, prior.scale=0, prior.mean=1, verbose=FALSE)
+  pl <- ff$loglik[2]
+  cindex <- summary(ff)$concordance[[1]]
   measures <- list(loglik = pl, Cindex = cindex)
   round(unlist(measures), digits=3)
 }
