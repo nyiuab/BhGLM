@@ -10,8 +10,12 @@ export(glmNet)
 export(summary.bh)
 export(plot.bh)
 
+export(measure.bh)
+export(measure.glm)
+export(measure.nb)
+export(measure.cox)
+export(measure.polr)
 export(cv.bh)
-export(predict.bh)
 
 export(mc.adj)
 export(df.adj)
