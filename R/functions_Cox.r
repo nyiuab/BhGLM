@@ -9,10 +9,10 @@ surv.curves <- function (y, lp, probs=0.50, mark.time=TRUE, main=" ",
   group = as.numeric(cut(lp, c(-Inf, quantile(lp, probs = probs), Inf)))   
   sf = survfit(y ~ group)
   if (!add)
-    plot(sf, conf.int=FALSE, mark.time=mark.time, main=main, lwd=lwd, lty=lty, pch=pch, col=col, 
+    plot(sf, conf.int=FALSE, mark.time=mark.time, main=main, lwd=lwd, lty=lty, col=col, 
          xlab="Time", ylab="Survival probability")
   else
-    lines(sf, conf.int=FALSE, mark.time=mark.time, lwd=lwd, lty=lty, pch=pch, col=col)
+    lines(sf, conf.int=FALSE, mark.time=mark.time, lwd=lwd, lty=lty, col=col)
   logrank = survdiff(y ~ group)
   p = signif(pchisq(logrank$chisq, df=length(unique(group))-1, lower.tail=F), digits=3)
   legend("topright", paste("p =", p), cex = 0.8, bty = "n")

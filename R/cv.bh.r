@@ -320,8 +320,8 @@ cv.bh.polr <- function(object, nfolds = 10, foldid = NULL, ncv = 1, verbose = TR
       subset1[omit] <- FALSE
       if (!is.null(object$prior.scale)) fit <- update(object, subset=subset1, Hess=FALSE, verbose=FALSE)
       else fit <- update(object, subset=subset1, Hess=FALSE) 
-      dd <- predict.bh(fit, new.x=x.obj[omit, , drop=FALSE], new.y=y.obj[omit])
-      y.fitted[omit, ] <- dd$y.fitted
+      dd <- predict(fit, newdata=x.obj[omit, , drop=FALSE], type="probs")
+      y.fitted[omit, ] <- dd
       
       if (verbose) {
         j <- j + 1
