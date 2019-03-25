@@ -15,6 +15,15 @@ bcoxph <- function (formula, data, weights, subset, na.action, init,
     ties <- ties[1]
 #    ties <- match.arg(ties)
     Call <- match.call()
+    extraArgs <- list(...)
+    if (length(extraArgs)) {
+      controlargs <- names(formals(coxph.control))
+      indx <- pmatch(names(extraArgs), controlargs, nomatch = 0L)
+      if (any(indx == 0L)) 
+        stop(gettextf("Argument %s not matched", names(extraArgs)[indx == 
+                                                                    0L]), domain = NA)
+    }
+    if (missing(control)) control <- coxph.control(...)
     indx <- match(c("formula", "data", "weights", "subset", "na.action"), 
         names(Call), nomatch = 0)
     if (indx[1] == 0) 
@@ -34,14 +43,6 @@ bcoxph <- function (formula, data, weights, subset, na.action, init,
     if (nrow(mf) == 0) 
         stop("No (non-missing) observations")
     Terms <- terms(mf)
-    extraArgs <- list()
-    if (length(extraArgs)) {
-        controlargs <- names(formals(coxph.control))
-        indx <- pmatch(names(extraArgs), controlargs, nomatch = 0L)
-        if (any(indx == 0L)) 
-            stop(gettextf("Argument %s not matched", names(extraArgs)[indx == 
-                0L]), domain = NA)
-    }
     Y <- model.extract(mf, "response")
     if (!inherits(Y, "Surv")) 
         stop("Response must be a survival object")
@@ -50,12 +51,8 @@ bcoxph <- function (formula, data, weights, subset, na.action, init,
         stop(paste("Cox model doesn't support \"", type, "\" survival data", 
             sep = ""))
     data.n <- nrow(Y)
-#    if (length(attr(Terms, "variables")) > 2) {
-#        ytemp <- terms.inner(attr(Terms, "variables")[1:2])
-#        xtemp <- terms.inner(attr(Terms, "variables")[-2])
-#        if (any(!is.na(match(xtemp, ytemp)))) 
-#            warning("a variable appears on both the left and right sides of the formula")
-#    }
+    if (control$timefix) Y <- aeqSurv(Y)
+
     strats <- attr(Terms, "specials")$strata
     if (length(strats)) {
         stemp <- untangle.specials(Terms, "strata", 1)
@@ -128,15 +125,29 @@ bcoxph <- function (formula, data, weights, subset, na.action, init,
                 1L), as.integer(sort.end - 1L), as.integer(newstrat))
             tindex <- counts$index
         }
-        mf <- mf[tindex, ]
         Y <- Surv(rep(counts$time, counts$nrisk), counts$status)
         type <- "right"
+        mf <- mf[tindex, ]
         strats <- rep(1:length(counts$nrisk), counts$nrisk)
         weights <- model.weights(mf)
         if (!is.null(weights) && any(!is.finite(weights))) 
             stop("weights must be finite")
-        for (i in 1:ntrans) mf[[timetrans$var[i]]] <- (tt[[i]])(mf[[timetrans$var[i]]], 
-            Y[, 1], strats, weights)
+        tcall <- attr(Terms, "variables")[timetrans$terms + 2]
+        pvars <- attr(Terms, "predvars")
+        pmethod <- sub("makepredictcall.", "", as.vector(methods("makepredictcall")))
+        for (i in 1:ntrans) {
+          newtt <- (tt[[i]])(mf[[timetrans$var[i]]], Y[, 1], 
+                             strats, weights)
+          mf[[timetrans$var[i]]] <- newtt
+          nclass <- class(newtt)
+          if (any(nclass %in% pmethod)) {
+            dummy <- as.call(list(as.name(class(newtt)[1]), 
+                                  tcall[[i]][[2]]))
+            ptemp <- makepredictcall(newtt, dummy)
+            pvars[[timetrans$terms[i] + 2]] <- ptemp
+          }
+        }
+        attr(Terms, "predvars") <- pvars
     }
     cluster <- attr(Terms, "specials")$cluster
     if (length(cluster)) {
@@ -146,12 +157,10 @@ bcoxph <- function (formula, data, weights, subset, na.action, init,
         if (any(ord > 1)) 
             stop("Cluster can not be used in an interaction")
         cluster <- strata(mf[, tempc$vars], shortlabel = TRUE)
-        dropterms <- tempc$terms
-#        dropcon <- tempc$vars
+        Terms <- Terms[-tempc$terms]
         xlevels <- .getXlevels(Terms[-tempc$terms], mf)
     }
     else {
-        dropterms <- NULL
         if (missing(robust)) 
             robust <- FALSE
         xlevels <- .getXlevels(Terms, mf)
@@ -159,6 +168,7 @@ bcoxph <- function (formula, data, weights, subset, na.action, init,
     contrast.arg <- NULL
     attr(Terms, "intercept") <- 1
     adrop <- 0
+    dropterms <- NULL
     stemp <- untangle.specials(Terms, "strata", 1)
     if (length(stemp$vars) > 0) {
         hasinteractions <- FALSE
@@ -210,14 +220,12 @@ bcoxph <- function (formula, data, weights, subset, na.action, init,
         stop("initial values lead to overflow or underflow of the exp function")
     }
 
-
     fit <- bcoxph.fit(X, Y, offset = offset, weights = weights, init = init, 
                       control = control, strats = factor(strats),
                       ties = ties, prior = prior, group = group, method.coef = method.coef, 
                       prior.mean = prior.mean, prior.sd = prior.sd, 
                       prior.scale = prior.scale, prior.df = prior.df, ss = ss, Warning = Warning) 
     
-
     na.action <- attr(mf, "na.action")
     if (length(na.action)) 
       fit$na.action <- na.action
@@ -234,14 +242,13 @@ bcoxph <- function (formula, data, weights, subset, na.action, init,
       else fit$strata <- strata.keep
     }
 
-
     fit$terms <- Terms
     fit$assign <- assign
     if (!is.null(weights) && any(weights != 1)) fit$weights <- weights
-    fit$offset <- NULL
-    if (any(offset != 0)) fit$offset <- offset
-
     fit$formula <- formula(Terms)
+    if (length(xlevels) > 0) fit$xlevels <- xlevels
+    fit$contrasts <- contr.save
+    if (any(offset != 0)) fit$offset <- offset
     fit$call <- Call
 
     stop.time <- Sys.time()
@@ -251,7 +258,6 @@ bcoxph <- function (formula, data, weights, subset, na.action, init,
       cat("Computational time:", minutes, "minutes \n")
     }
     
-
     fit
 }
 
@@ -397,7 +403,6 @@ bcoxph.fit <- function(x, y, offset = rep(0, nobs), weights = rep(1, nobs), init
   fit$group <- group
   fit$group.vars <- group.vars
   fit$ungroup.vars <- ungroup.vars
-#  if (!is.null(linked.vars)) fit$linked.vars <- linked.vars
   fit$method.coef <- method.coef
   if (prior == "mde" | prior == "mt") {
     fit$p <- p[unlist(group.vars)]
