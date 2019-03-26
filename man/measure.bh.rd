@@ -4,7 +4,7 @@
 \alias{measure.bh}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Evaluating Fitted Bayesian Models
+Evaluating Fitted Models
 }
 
 \description{
@@ -13,6 +13,14 @@ This function obtains various measures for new (or existing) data from a fitted 
 
 \usage{
 measure.bh(object, new.x, new.y, new.offset) 
+
+measure.glm(pred, obs, family, dispersion = 1)
+
+measure.nb(pred, obs, theta = 1) 
+
+measure.cox(pred, obs)
+
+measure.polr(pred, obs)
 }
 
 %- maybe also 'usage' for other objects documented here.
@@ -28,8 +36,24 @@ measure.bh(object, new.x, new.y, new.offset)
   If \code{new.x} or \code{new.y} are omitted, the fitted linear predictors are used for prediction. 
 }
   \item{new.offset}{ 
-  data frame or vector of offset values for new data points.  
+  data frame or vector of offset values for new data points. If \code{new.x} includes offset, do not need to set \code{new.offset}.  
   }
+  \item{pred}{
+  predicted (estimated) response values. For \code{measure.cox}, estimated linear predictor values. 
+  }
+  \item{obs}{
+  observed response values.
+  }
+  \item{family}{
+  family in GLMs.
+  }
+  \item{dispersion}{
+  dispersion in GLMs.
+  }
+  \item{theta}{
+  theta in negative binomial model.
+  }
+  
 }
 
 \details{
