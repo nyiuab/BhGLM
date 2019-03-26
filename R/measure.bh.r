@@ -76,6 +76,8 @@ measure.bh <- function (object, new.x, new.y, new.offset)
 
 measure.glm <- function (pred, obs, family, dispersion = 1) 
 {
+  if (NROW(pred)!=NROW(obs))
+    stop("'pred' and 'obs' should be the same length.", call. = FALSE)
   y <- obs
   mu <- pred
   if (is.character(family)) family <- get(family, mode="function", envir=parent.frame())
@@ -116,6 +118,8 @@ measure.glm <- function (pred, obs, family, dispersion = 1)
 
 measure.nb <- function (pred, obs, theta = 1) 
 {
+  if (NROW(pred)!=NROW(obs))
+    stop("'pred' and 'obs' should be the same length.", call. = FALSE)
   y <- obs
   mu <- pred
   logL <- dnbinom(y, size = theta, mu = mu, log = TRUE)
@@ -132,6 +136,8 @@ measure.nb <- function (pred, obs, theta = 1)
 
 measure.cox <- function (pred, obs) 
 {
+  if (NROW(pred)!=NROW(obs))
+    stop("'pred' and 'obs' should be the same length.", call. = FALSE)
   y <- obs
   lp <- pred
 #  pl <- coxph(y ~ lp, init = 1, control = coxph.control(iter.max=1), method = "breslow")$loglik[1]
@@ -149,6 +155,8 @@ measure.polr <- function (pred, obs)
 {
   y <- obs
   if (is.vector(pred)) pred <- t(as.matrix(pred))
+  if (NROW(pred)!=NROW(obs))
+    stop("'pred' and 'obs' should be the same length.", call. = FALSE)
   auc <- mse <- misclassification <- 0
   y.level <- levels(y)
   for (k in 1:NCOL(pred)) {
