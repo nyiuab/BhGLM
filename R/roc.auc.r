@@ -43,7 +43,7 @@ roc.auc <- function(y, y.fitted, main = " ", xlab="False positive rate", ylab="T
   a <- rep(0, m)
   for (i in 1:m) {a[i] <- fp2[i] * dtp2[i] + (fp2[i] * tp2[i]) / 2}
   auc <- sum(a) / (d * (n - d) + 1e-06)     # area under curve
-  if (auc <= 0) auc <- 0.5
+  if (auc <= 0) auc <- 0
   
   # test hypothesis of auc=0.5 (Mann-Whitney U test)
   q1 <- rep(0, m)                   # degression (leijian) of tp2
@@ -56,14 +56,13 @@ roc.auc <- function(y, y.fitted, main = " ", xlab="False positive rate", ylab="T
   sq2 <- sum(q2) / (d * (n - d)^2 + 1e-06)
   se <- z <- p <- lci <- rci <- NULL
   se <- (auc * (1 - auc) + (d - 1) * (sq1 - auc^2) + ((n - d) - 1) * (sq2 - auc^2)) / (d * (n - d) + 1e-06)
-  if(se > 0){
-    se <- sqrt(se)
-    z <- (auc - 0.5) / se             # z score
-    p <- 2 * pnorm(-abs(z))           # p-value for two-tailed test
-  }
-  auc <- round(auc, digits=3)
+  if (se <= 0) se <- 1e-04
+  se <- sqrt(se)
+  z <- (auc - 0.5) / se             # z score
+  p <- 2 * pnorm(-abs(z))           # p-value for two-tailed test
   se <- round(se, digits=3)
   p <- signif(p, digits=3)
+  auc <- round(auc, digits=3)
   
   if (!plot) legend <- FALSE
   if (legend){
