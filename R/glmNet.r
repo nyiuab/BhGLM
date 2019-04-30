@@ -4,7 +4,7 @@
 glmNet <- function (x, y, family = c("gaussian", "binomial", "poisson", "cox"), 
                     weights = rep(1, nrow(x)), offset = NULL,
                     alpha = c(1, 0.5, 0), lambda, penalty.factor = rep(1, ncol(x)), 
-                    nfolds = 10, ncv = 10, verbose = TRUE)
+                    nfolds = 10, ncv = 10, verbose = FALSE)
 {
   if (!requireNamespace("glmnet")) install.packages("glmnet")
   require(glmnet)

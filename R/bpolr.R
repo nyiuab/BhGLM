@@ -3,7 +3,7 @@ bpolr <- function (formula, data, weights, start, subset, na.action,
                    method = c("logistic", "probit", "loglog", "cloglog", "cauchit"), 
                    contrasts = NULL, Hess = TRUE, 
                    prior.mean = 0, prior.scale = 0.5, prior.df = 1, 
-                   verbose = TRUE, ...) 
+                   verbose = FALSE, ...) 
 {
   if (!requireNamespace("MASS")) install.packages("MASS")
     library(MASS)

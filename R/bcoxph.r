@@ -1,9 +1,9 @@
 
 bcoxph <- function (formula, data, weights, subset, na.action, init, 
                     control = coxph.control(eps = 1e-04, iter.max = 50), ties = c("breslow", "efron"), tt,  
-                    prior = c("de", "t", "mde", "mt"), group = NULL, method.coef, 
+                    prior = c("t", "de", "mde"), group = NULL, method.coef, 
                     prior.sd = 0.5, prior.scale = 0.5, prior.df = 1, prior.mean = 0, ss = c(0.04, 0.5), 
-                    Warning = FALSE, verbose = TRUE, ...) 
+                    Warning = FALSE, verbose = FALSE, ...) 
 {
   if (!requireNamespace("survival")) install.packages("survival")
     require(survival)
@@ -213,11 +213,12 @@ bcoxph <- function (formula, data, weights, subset, na.action, init,
     if (missing(init))
       init <- rep(0, NCOL(X))
     else {
-      if (length(init) != ncol(X)) 
+      if (length(init) != NCOL(X)) 
         stop("wrong length for init argument")
       temp <- X %*% init - sum(colMeans(X) * init)
       if (any(temp < .Machine$double.min.exp | temp > .Machine$double.max.exp)) 
-        stop("initial values lead to overflow or underflow of the exp function")
+#        stop("initial values lead to overflow or underflow of the exp function")
+        warning("initial values lead to overflow or underflow of the exp function")
     }
 
     fit <- bcoxph.fit(X, Y, offset = offset, weights = weights, init = init, 
@@ -271,7 +272,7 @@ bcoxph.fit <- function(x, y, offset = rep(0, nobs), weights = rep(1, nobs), init
 {
   ss <- sort(ss)
   ss <- ifelse(ss <= 0, 0.001, ss)
-  if (prior == "mde" | prior == "mt")
+  if (prior == "mde")
     prior.sd <- prior.scale <- ss[length(ss)]  # used for ungrouped coefficients
   
   d <- prepare(x = x, intercept = FALSE, prior.mean = prior.mean, prior.sd = prior.sd, prior.scale = prior.scale, 
@@ -296,14 +297,13 @@ bcoxph.fit <- function(x, y, offset = rep(0, nobs), weights = rep(1, nobs), init
   if (length(group0) > 1) method.coef <- "group"
   
   # for mixture prior
-  if (prior == "mde" | prior == "mt") {
+  if (prior == "mde") {
     if (length(ss) != 2) stop("ss should have two positive values")
     theta <- rep(0.5, length(group.vars))
     p <- rep(0.5, length(prior.sd))
     names(p) <- names(prior.sd)
   }
   
-  if (length(init) != NCOL(x)) init <- rep(0, NCOL(x)) 
   names(init) <- colnames(x)
   coefs.hat <- init
   eta <- x %*% coefs.hat
@@ -322,9 +322,9 @@ bcoxph.fit <- function(x, y, offset = rep(0, nobs), weights = rep(1, nobs), init
     if (iter > 1) {
       beta0 <- coefs.hat - prior.mean
       
-      if (prior == "mde" | prior == "mt") {
-        out <- mix(prior = prior, prior.df = prior.df, prior.scale = prior.scale, 
-                   group.vars = group.vars, beta0 = beta0, ss = ss, theta = theta, p = p)
+      if (prior == "mde") {
+        out <- mix(prior.scale = prior.scale, group.vars = group.vars, beta0 = beta0, 
+                   ss = ss, theta = theta, p = p)
         prior.scale <- out[[1]]   
         p <- out[[2]]
         theta <- out[[3]]
@@ -404,7 +404,7 @@ bcoxph.fit <- function(x, y, offset = rep(0, nobs), weights = rep(1, nobs), init
   fit$group.vars <- group.vars
   fit$ungroup.vars <- ungroup.vars
   fit$method.coef <- method.coef
-  if (prior == "mde" | prior == "mt") {
+  if (prior == "mde") {
     fit$p <- p[unlist(group.vars)]
     fit$ptheta <- theta
     fit$ss <- ss

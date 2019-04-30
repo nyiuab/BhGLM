@@ -1,21 +1,37 @@
 
 #*******************************************************************************
 
-cv.bh <- function(object, nfolds = 10, foldid = NULL, ncv = 1, verbose = TRUE)
+cv.bh <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
 {
   start.time <- Sys.time()
   
-  if (any(class(object) %in% "glm")) 
-    out <- cv.bh.glm(object = object, nfolds = nfolds, foldid = foldid, ncv = ncv, verbose = verbose)
+  if (!"gam" %in% class(object))
+  {
+    if (any(class(object) %in% "glm")) 
+      out <- cv.bh.glm(object=object, nfolds=nfolds, foldid=foldid, ncv=ncv, verbose=verbose)
   
-  if (any(class(object) %in% "coxph")) 
-    out <- cv.bh.coxph(object = object, nfolds = nfolds, foldid = foldid, ncv = ncv, verbose = verbose)
+    if (any(class(object) %in% "coxph")) 
+      out <- cv.bh.coxph(object=object, nfolds=nfolds, foldid=foldid, ncv=ncv, verbose=verbose)
   
-  if (any(class(object) %in% "glmNet") | any(class(object) %in% "bmlasso")) 
-    out <- cv.bh.lasso(object = object, nfolds = nfolds, foldid = foldid, ncv = ncv, verbose = verbose)
+    if (any(class(object) %in% "glmNet") | any(class(object) %in% "bmlasso")) 
+      out <- cv.bh.lasso(object=object, nfolds=nfolds, foldid=foldid, ncv=ncv, verbose=verbose)
   
-  if (any(class(object) %in% "polr")) 
-    out <- cv.bh.polr(object = object, nfolds = nfolds, foldid = foldid, ncv = ncv, verbose = verbose)
+    if (any(class(object) %in% "polr")) 
+      out <- cv.bh.polr(object=object, nfolds=nfolds, foldid=foldid, ncv=ncv, verbose=verbose)
+  }
+  else
+  {
+    fam <- object$family$family 
+    if (substr(fam, 1, 17) == "Negative Binomial") fam <- "NegBin"
+    gam.fam <- c("gaussian", "binomial", "poisson", "quasibinomial", "quasipoisson", "NegBin", 
+                 "Cox PH")
+    if (! fam %in% gam.fam)
+      stop("Cross-validation for this family has not been implemented yet")
+    if (fam %in% gam.fam[1:6])
+      out <- cv.gam.glm(object=object, nfolds=nfolds, foldid=foldid, ncv=ncv, verbose=verbose)
+    if (fam == "Cox PH")
+      out <- cv.gam.coxph(object=object, nfolds=nfolds, foldid=foldid, ncv=ncv, verbose=verbose)
+  }
   
   stop.time <- Sys.time()
   Time <- round(difftime(stop.time, start.time, units = "min"), 3)
@@ -25,49 +41,49 @@ cv.bh <- function(object, nfolds = 10, foldid = NULL, ncv = 1, verbose = TRUE)
   out
 }
 
+generate.foldid <- function(nobs, nfolds=10, foldid=NULL, ncv=1)
+{
+  if (nfolds > nobs) nfolds <- n
+  if (nfolds == nobs) ncv <- 1
+  if (is.null(foldid)) {
+   foldid <- array(NA, c(nobs, ncv)) 
+   for(j in 1:ncv) 
+     foldid[, j] <- sample(rep(seq(nfolds), length=nobs))
+  }
+  nfolds <- max(foldid)
+  ncv <- ncol(foldid)
+  
+  list(foldid=foldid, nfolds=nfolds, ncv=ncv)
+}
+  
 
 ### for bglm, glm
-cv.bh.glm <- function(object, nfolds = 10, foldid = NULL, ncv = 1, verbose = TRUE)
+cv.bh.glm <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
 {
   data.obj <- model.frame(object)
-  x.obj <- model.matrix(object)
   y.obj <- model.response(data.obj)
   n <- NROW(y.obj)
-  offset <- model.offset(data.obj)
-  
-  measures0 <- lp0 <- y.fitted0 <- foldid0 <- NULL
-  fold <- foldid
-  if (!is.null(foldid)) {
-    fold <- as.matrix(foldid)
-    nfolds <- max(foldid)
-    ncv <- ncol(fold)
-  }
-  if (nfolds > n) nfolds <- n
-  if (nfolds == n) ncv <- 1
+  fol <- generate.foldid(nobs=n, nfolds=nfolds, foldid=foldid, ncv=ncv)
+  foldid <- fol$foldid
+  nfolds <- fol$nfolds
+  ncv <- fol$ncv
+  measures0 <- lp0 <- y.fitted0 <- NULL
   j <- 0
   
-  if (verbose) cat("Fitting", "ncv*nfolds =", ncv * nfolds, "models: \n")
+  if (verbose) cat("Fitting", "ncv*nfolds =", ncv*nfolds, "models: \n")
   for (k in 1:ncv) {
-    
     y.fitted <- lp <- rep(NA, n)
     deviance <- NULL
     
-    if (!is.null(fold)) foldid <- fold[, k]
-    else foldid <- sample(rep(seq(nfolds), length = n)) #sample(1:nfolds, size = n, replace = TRUE)
-    
     for (i in 1:nfolds) {
       subset1 <- rep(TRUE, n)
-      omit <- which(foldid == i)
+      omit <- which(foldid[, k] == i)
       subset1[omit] <- FALSE
-      if (!is.null(object$prior.sd)) fit <- update(object, subset = subset1, verbose = FALSE)
-      else fit <- update(object, subset = subset1) 
-      lp[omit] <- x.obj[omit, , drop = FALSE] %*% fit$coefficients
-      if (!is.null(offset)) lp[omit] <- lp[omit] + offset[omit]
+      fit <- update(object, subset = subset1)
+      lp[omit] <- predict(fit, newdata=data.obj[omit, , drop=FALSE])
       y.fitted[omit] <- object$family$linkinv(lp[omit])
-      if (any(class(object) %in% "negbin")) 
-        dd <- measure.nb(pred=y.fitted[omit], obs=y.obj[omit], theta=fit$theta)
-      else  
-        dd <- measure.glm(pred=y.fitted[omit], obs=y.obj[omit], family=object$family, dispersion=fit$dispersion) 
+      if (any(class(object) %in% "negbin")) fit$dispersion <- fit$theta
+      dd <- suppressWarnings( measure.glm(y.obj[omit], y.fitted[omit], family=object$family, dispersion=fit$dispersion) ) 
       deviance <- c(deviance, dd["deviance"])
       
       if (verbose) {
@@ -76,16 +92,12 @@ cv.bh.glm <- function(object, nfolds = 10, foldid = NULL, ncv = 1, verbose = TRU
       }
     }
     
-    if (any(class(object) %in% "negbin")) 
-      measures <- measure.nb(pred=y.fitted, obs=y.obj)
-    else  
-      measures <- measure.glm(pred=y.fitted, obs=y.obj, family=object$family) 
+    measures <- measure.glm(y.obj, y.fitted, family=object$family) 
     measures["deviance"] <- sum(deviance)
     
     measures0 <- rbind(measures0, measures)
     lp0 <- cbind(lp0, lp)
     y.fitted0 <- cbind(y.fitted0, y.fitted)
-    foldid0 <- cbind(foldid0, foldid)
     
   }
   
@@ -97,58 +109,36 @@ cv.bh.glm <- function(object, nfolds = 10, foldid = NULL, ncv = 1, verbose = TRU
   }
   out$measures <- round(out$measures, digits=3)
   out$y.obs <- y.obj
-  out$lp <- rowMeans(lp0, na.rm = TRUE)
-  out$y.fitted <- rowMeans(y.fitted0, na.rm = TRUE)
-  out$foldid <- foldid0
-  if (ncv > 1){
-    rownames(measures0) <- NULL
-    out$detail <- list(measures = measures0, lp = lp0)
-  }
+  out$lp <- lp0
+  out$y.fitted <- y.fitted0
+  out$foldid <- foldid
   
   out
 }
 
 # for bcoxph, coxph
-cv.bh.coxph <- function(object, nfolds = 10, foldid = NULL, ncv = 1, verbose = TRUE)
+cv.bh.coxph <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
 {
   data.obj <- model.frame(object)
-  x.obj <- model.matrix(object)
   y.obj <- model.response(data.obj)
   n <- NROW(y.obj)
-  offset <- model.offset(data.obj)
-  
-  measures0 <- lp0 <- foldid0 <- NULL
-  fold <- foldid
-  if (!is.null(foldid)) {
-    fold <- as.matrix(foldid)
-    nfolds <- max(foldid)
-    ncv <- ncol(fold)
-  }
-  if (nfolds > n) nfolds <- n
-  if (nfolds == n) ncv <- 1
+  fol <- generate.foldid(nobs=n, nfolds=nfolds, foldid=foldid, ncv=ncv)
+  foldid <- fol$foldid
+  nfolds <- fol$nfolds
+  ncv <- fol$ncv
+  measures0 <- lp0 <- NULL
   j <- 0
   
-  if (verbose) cat("Fitting", "ncv*nfolds =", ncv * nfolds, "models: \n")
+  if (verbose) cat("Fitting", "ncv*nfolds =", ncv*nfolds, "models: \n")
   for (k in 1:ncv) {
-    
     lp <- rep(NA, n)
-    pl <- NULL
-    
-    if (!is.null(fold)) foldid <- fold[, k]
-    else foldid <- sample(rep(seq(nfolds), length = n)) 
     
     for (i in 1:nfolds) {
       subset1 <- rep(TRUE, n)
-      omit <- which(foldid == i)
+      omit <- which(foldid[, k] == i)
       subset1[omit] <- FALSE
-      if (!is.null(object$prior.sd)) fit <- update(object, subset = subset1, verbose = FALSE)
-      else fit <- update(object, subset = subset1)
-      xb <- x.obj %*% fit$coefficients
-      if (!is.null(offset)) xb <- xb + offset
-      dd1 <- coxph(y.obj ~ xb, init = 1, control = coxph.control(iter.max=1), method = object$method)
-      dd2 <- coxph(y.obj ~ xb, init = 1, control = coxph.control(iter.max=1), subset = subset1, method = object$method)
-      lp[omit] <- xb[omit]        
-      pl <- c(pl, dd1$loglik[1] - dd2$loglik[1])
+      fit <- update(object, subset = subset1)
+      lp[omit] <- predict(fit, newdata=data.obj[omit, , drop=FALSE])
       
       if (verbose) {
         j <- j + 1
@@ -156,12 +146,9 @@ cv.bh.coxph <- function(object, nfolds = 10, foldid = NULL, ncv = 1, verbose = T
       }
     }
   
-    measures <- c(sum(pl), measure.cox(pred=lp, obs=y.obj))
-    names(measures) <- c("CVPL", "pl", "Cindex")
-    
+    measures <- measure.cox(y.obj, lp)
     measures0 <- rbind(measures0, measures)
     lp0 <- cbind(lp0, lp)
-    foldid0 <- cbind(foldid0, foldid)
   }
   
   out <- list()
@@ -172,18 +159,14 @@ cv.bh.coxph <- function(object, nfolds = 10, foldid = NULL, ncv = 1, verbose = T
   }
   out$measures <- round(out$measures, digits=3)
   out$y.obs <- y.obj
-  out$lp <- rowMeans(lp0, na.rm = TRUE)
-  out$foldid <- foldid0
-  if (ncv > 1){
-    rownames(measures0) <- NULL
-    out$detail <- list(measures = measures0, lp = lp0)
-  }
+  out$lp <- lp0
+  out$foldid <- foldid
   
   out
 }
 
 # for lasso, mlasso
-cv.bh.lasso <- function(object, nfolds = 10, foldid = NULL, ncv = 1, verbose = TRUE)
+cv.bh.lasso <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
 { 
   family <- object$family
   if (family=="gaussian") fa <- gaussian()
@@ -198,52 +181,38 @@ cv.bh.lasso <- function(object, nfolds = 10, foldid = NULL, ncv = 1, verbose = T
   init <- object$coefficients
   init <- init[!names(init)%in%"(Intercept)"]
   
-  measures0 <- lp0 <- y.fitted0 <- foldid0 <- NULL
-  fold <- foldid
-  if (!is.null(foldid)) {
-    fold <- as.matrix(foldid)
-    nfolds <- max(foldid)
-    ncv <- ncol(fold)
-  }
-  if (nfolds > n) nfolds <- n
-  if (nfolds == n) ncv <- 1
+  fol <- generate.foldid(nobs=n, nfolds=nfolds, foldid=foldid, ncv=ncv)
+  foldid <- fol$foldid
+  nfolds <- fol$nfolds
+  ncv <- fol$ncv
+  measures0 <- lp0 <- y.fitted0 <- NULL
   j <- 0
   
-  if (verbose) cat("Fitting", "ncv*nfolds =", ncv * nfolds, "models: \n")
+  if (verbose) cat("Fitting", "ncv*nfolds =", ncv*nfolds, "models: \n")
   for (k in 1:ncv) {
-    
     y.fitted <- lp <- rep(NA, n)
-    deviance <- pl <- NULL
-    
-    if (!is.null(fold)) foldid <- fold[, k]
-    else foldid <- sample(rep(seq(nfolds), length = n)) #sample(1:nfolds, size = n, replace = TRUE)
+    deviance <- NULL
     
     for (i in 1:nfolds) {
       subset1 <- rep(TRUE, n)
-      omit <- which(foldid == i)
+      omit <- which(foldid[, k] == i)
       subset1[omit] <- FALSE
       if (any(class(object) %in% "glmNet"))
-        fit <- update(object, x = x.obj[-omit, ], y = y.obj[-omit], weights = object$weights[-omit], offset = offset[-omit],
-                      lambda = object$lambda, verbose = FALSE)
+        fit <- update(object, x=x.obj[-omit, ], y=y.obj[-omit], weights=object$weights[-omit], offset=offset[-omit],
+                      lambda=object$lambda, verbose=FALSE)
       if (any(class(object) %in% "bmlasso"))
-        fit <- update(object, x = x.obj[-omit, ], y = y.obj[-omit], weights = object$weights[-omit], offset = offset[-omit], 
-                      init = init, verbose = FALSE)
+        fit <- update(object, x=x.obj[-omit, ], y=y.obj[-omit], weights=object$weights[-omit], offset=offset[-omit], 
+                      init=init, verbose=FALSE)
       if (any(class(object) %in% "GLM")) {
-        lp[omit] <- cbind(1, x.obj[omit, , drop = FALSE]) %*% fit$coefficients
+        lp[omit] <- cbind(1, x.obj[omit, , drop=FALSE]) %*% fit$coefficients
         if (!is.null(offset)) lp[omit] <- lp[omit] + offset[omit]
         y.fitted[omit] <- fa$linkinv(lp[omit])
-        dd <- measure.glm(pred=y.fitted[omit], obs=y.obj[omit], family=fa, dispersion=fit$dispersion) 
+        dd <- suppressWarnings( measure.glm(y.obj[omit], y.fitted[omit], family=fa, dispersion=fit$dispersion) )
         deviance <- c(deviance, dd["deviance"])
       }
-      if (any(class(object) %in% "COXPH")) {
-        xb <- x.obj %*% fit$coefficients 
-        if (!is.null(offset)) xb <- xb + offset
-        dd1 <- coxph(y.obj ~ xb, init = 1, control = coxph.control(iter.max=1), method = "breslow")
-        dd2 <- coxph(y.obj ~ xb, init = 1, control = coxph.control(iter.max=1), subset = subset1, method = "breslow")
-        lp[omit] <- xb[omit]
-        pl <- c(pl, dd1$loglik[1] - dd2$loglik[1])
-      }
-      
+      if (any(class(object) %in% "COXPH")) 
+        lp[omit] <- x.obj[omit, , drop=FALSE] %*% fit$coefficients 
+         
       if (verbose) {
         j <- j + 1
         cat(j, "")
@@ -251,18 +220,15 @@ cv.bh.lasso <- function(object, nfolds = 10, foldid = NULL, ncv = 1, verbose = T
     }
     
     if (any(class(object) %in% "GLM")) {
-      measures <- measure.glm(pred=y.fitted, obs=y.obj, family=fa)
+      measures <- measure.glm(y.obj, y.fitted, family=fa)
       measures["deviance"] <- sum(deviance)
+      y.fitted0 <- cbind(y.fitted0, y.fitted)
     }
-    if (any(class(object) %in% "COXPH")) {
-      measures <- c(sum(pl), measure.cox(pred=lp, obs=y.obj))
-      names(measures) <- c("CVPL", "pl", "Cindex")
-    }
+    if (any(class(object) %in% "COXPH")) 
+      measures <- measure.cox(y.obj, lp)
     
     measures0 <- rbind(measures0, measures)
     lp0 <- cbind(lp0, lp)
-    y.fitted0 <- cbind(y.fitted0, y.fitted)
-    foldid0 <- cbind(foldid0, foldid)
   }
   
   out <- list()
@@ -273,55 +239,38 @@ cv.bh.lasso <- function(object, nfolds = 10, foldid = NULL, ncv = 1, verbose = T
   }
   out$measures <- round(out$measures, digits=3)
   out$y.obs <- y.obj
-  out$lp <- rowMeans(lp0, na.rm = TRUE)
-  out$y.fitted <- rowMeans(y.fitted0, na.rm = TRUE)
-  out$foldid <- foldid0
-  
-  if (ncv > 1){
-    rownames(measures0) <- NULL
-    out$detail <- list(measures = measures0, lp = lp0)
-  }
-  
+  out$lp <- lp0
+  if (any(class(object) %in% "GLM")) out$y.fitted <- y.fitted0
+  out$foldid <- foldid
+
   out
 }
 
 
 ### for bpolr, polr
-cv.bh.polr <- function(object, nfolds = 10, foldid = NULL, ncv = 1, verbose = TRUE)
+cv.bh.polr <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
 { 
   data.obj <- model.frame(object)
-  x.obj <- data.obj[, -1, drop = FALSE]
   y.obj <- model.response(data.obj)
   n <- NROW(y.obj)
-  
-  measures0 <- lp0 <- foldid0 <- NULL
+  fol <- generate.foldid(nobs=n, nfolds=nfolds, foldid=foldid, ncv=ncv)
+  foldid <- fol$foldid
+  nfolds <- fol$nfolds
+  ncv <- fol$ncv
+  measures0 <- NULL
   y.fitted0 <- list()
-  fold <- foldid
-  if (!is.null(foldid)) {
-    fold <- as.matrix(foldid)
-    nfolds <- max(foldid)
-    ncv <- ncol(fold)
-  }
-  if (nfolds > n) nfolds <- n
-  if (nfolds == n) ncv <- 1
   j <- 0
-  
+
   if (verbose) cat("Fitting", "ncv*nfolds =", ncv * nfolds, "models: \n")
   for (k in 1:ncv) {
-    
     y.fitted <- array(0, c(n, length(levels(y.obj))))
-    
-    if (!is.null(fold)) foldid <- fold[, k]
-    else foldid <- sample(rep(seq(nfolds), length = n)) #sample(1:nfolds, size = n, replace = TRUE)
     
     for (i in 1:nfolds) {
       subset1 <- rep(TRUE, n)
-      omit <- which(foldid == i)
+      omit <- which(foldid[, k] == i)
       subset1[omit] <- FALSE
-      if (!is.null(object$prior.scale)) fit <- update(object, subset=subset1, Hess=FALSE, verbose=FALSE)
-      else fit <- update(object, subset=subset1, Hess=FALSE) 
-      dd <- predict(fit, newdata=x.obj[omit, , drop=FALSE], type="probs")
-      y.fitted[omit, ] <- dd
+      fit <- update(object, subset=subset1, Hess=FALSE) 
+      y.fitted[omit, ] <- predict(fit, newdata=data.obj[omit, , drop=FALSE], type="probs")
       
       if (verbose) {
         j <- j + 1
@@ -329,11 +278,10 @@ cv.bh.polr <- function(object, nfolds = 10, foldid = NULL, ncv = 1, verbose = TR
       }
     }
     
-    measures <- measure.polr(pred=y.fitted, obs=y.obj)
+    measures <- measure.polr(y.obj, y.fitted)
     
     measures0 <- rbind(measures0, measures)
     y.fitted0[[k]] <- y.fitted
-    foldid0 <- cbind(foldid0, foldid)
   }
   
   out <- list()
@@ -344,13 +292,125 @@ cv.bh.polr <- function(object, nfolds = 10, foldid = NULL, ncv = 1, verbose = TR
   }
   out$measures <- round(out$measures, digits=3)
   out$y.obs <- y.obj
-  out$y.fitted <- array(0, c(n, length(levels(y.obj))))
-  for (k in 1:ncv) out$y.fitted <- out$y.fitted + y.fitted0[[k]]/ncv 
-  out$foldid <- foldid0
-  if (ncv > 1) out$detail <- measures0
+#  out$y.fitted <- array(0, c(n, length(levels(y.obj))))
+#  for (k in 1:ncv) out$y.fitted <- out$y.fitted + y.fitted0[[k]]/ncv 
+  out$y.fitted <- y.fitted0
+  out$foldid <- foldid
   
   out
 }
 
 #***********************************************************************************
+# for gam from mgcv
+
+cv.gam.glm <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
+{
+  data.obj <- model.frame(object)
+  y.obj <- model.response(data.obj)
+  n <- NROW(y.obj)
+  fol <- generate.foldid(nobs=n, nfolds=nfolds, foldid=foldid, ncv=ncv)
+  foldid <- fol$foldid
+  nfolds <- fol$nfolds
+  ncv <- fol$ncv
+  measures0 <- lp0 <- y.fitted0 <- NULL
+  j <- 0
+  
+  fam <- object$family
+  if (substr(object$family$family, 1, 17) == "Negative Binomial")
+    fam <- "NegBin"
+  
+  if (verbose) cat("Fitting", "ncv*nfolds =", ncv*nfolds, "models: \n")
+  for (k in 1:ncv) {
+    y.fitted <- lp <- rep(NA, n)
+    deviance <- NULL
+    
+    for (i in 1:nfolds) {
+      subset1 <- rep(TRUE, n)
+      omit <- which(foldid[, k] == i)
+      subset1[omit] <- FALSE
+      fit <- update(object, subset = subset1)
+      lp[omit] <- predict(fit, newdata=data.obj[omit, , drop=FALSE])
+      y.fitted[omit] <- object$family$linkinv(lp[omit])
+      if (fam[[1]] == "NegBin") fit$dispersion <- fit$family$getTheta(TRUE)
+      dd <- suppressWarnings( measure.glm(y.obj[omit], y.fitted[omit], family=fam, dispersion=fit$dispersion) ) 
+      deviance <- c(deviance, dd["deviance"])
+      
+      if (verbose) {
+        j <- j + 1
+        cat(j, "")
+      }
+    }
+    
+    measures <- measure.glm(y.obj, y.fitted, family=fam) 
+    measures["deviance"] <- sum(deviance)
+    
+    measures0 <- rbind(measures0, measures)
+    lp0 <- cbind(lp0, lp)
+    y.fitted0 <- cbind(y.fitted0, y.fitted)
+    
+  }
+  
+  out <- list()
+  if (nrow(measures0) == 1) out$measures <- colMeans(measures0, na.rm = TRUE)
+  else {
+    out$measures <- rbind(colMeans(measures0, na.rm = TRUE), apply(measures0, 2, sd, na.rm = TRUE))
+    rownames(out$measures) <- c("mean", "sd")
+  }
+  out$measures <- round(out$measures, digits=3)
+  out$y.obs <- y.obj
+  out$lp <- lp0
+  out$y.fitted <- y.fitted0
+  out$foldid <- foldid
+  
+  out
+}
+
+cv.gam.coxph <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
+{
+  require(survival)
+  data.obj <- model.frame(object)
+  y.obj <- Surv(model.response(data.obj), object$prior.weights)
+  n <- NROW(y.obj)
+  fol <- generate.foldid(nobs=n, nfolds=nfolds, foldid=foldid, ncv=ncv)
+  foldid <- fol$foldid
+  nfolds <- fol$nfolds
+  ncv <- fol$ncv
+  measures0 <- lp0 <- NULL
+  j <- 0
+  
+  if (verbose) cat("Fitting", "ncv*nfolds =", ncv*nfolds, "models: \n")
+  for (k in 1:ncv) {
+    lp <- rep(NA, n)
+    
+    for (i in 1:nfolds) {
+      subset1 <- rep(TRUE, n)
+      omit <- which(foldid[, k] == i)
+      subset1[omit] <- FALSE
+      fit <- update(object, subset = subset1)
+      lp[omit] <- predict(fit, newdata=data.obj[omit, , drop=FALSE])
+      
+      if (verbose) {
+        j <- j + 1
+        cat(j, "")
+      }
+    }
+    
+    measures <- measure.cox(y.obj, lp)
+    measures0 <- rbind(measures0, measures)
+    lp0 <- cbind(lp0, lp)
+  }
+  
+  out <- list()
+  if (nrow(measures0) == 1) out$measures <- colMeans(measures0, na.rm = TRUE)
+  else {
+    out$measures <- rbind(colMeans(measures0, na.rm = TRUE), apply(measures0, 2, sd, na.rm = TRUE))
+    rownames(out$measures) <- c("mean", "sd")
+  }
+  out$measures <- round(out$measures, digits=3)
+  out$y.obs <- y.obj
+  out$lp <- lp0
+  out$foldid <- foldid
+  
+  out
+}
 

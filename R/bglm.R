@@ -3,9 +3,9 @@
 
 bglm <- function (formula, family = gaussian, data, offset, weights, subset, na.action, 
            start = NULL, etastart, mustart, control = glm.control(epsilon = 1e-04, maxit = 50), 
-           prior = c("de", "t", "mde", "mt"), group = NULL, method.coef,
+           prior = c("t", "de", "mde"), group = NULL, method.coef,
            dispersion = 1, prior.sd = 0.5, prior.scale = 0.5, prior.df = 1, prior.mean = 0, ss = c(0.04, 0.5), 
-           Warning = FALSE, verbose = TRUE, ...)  
+           Warning = FALSE, verbose = FALSE, ...)  
 {
   start.time <- Sys.time()
   prior <- prior[1]
@@ -92,7 +92,7 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
 {
     ss <- sort(ss)
     ss <- ifelse(ss <= 0, 0.001, ss)
-    if (prior == "mde" | prior == "mt")
+    if (prior == "mde")
       prior.sd <- prior.scale <- ss[length(ss)]  # used for ungrouped coefficients
     
     if (is.null(dispersion)) dispersion <- 1
@@ -120,7 +120,7 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
     if (length(group0) > 1) method.coef <- "group"
     
     # for mixture prior
-    if (prior == "mde" | prior == "mt") {
+    if (prior == "mde") {
       if (length(ss) != 2) stop("ss should have two positive values")
       theta <- rep(0.5, length(group.vars))
       p <- rep(0.5, length(prior.sd))
@@ -254,9 +254,9 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
             if (iter > 1) {
               beta0 <- (coefs.hat - prior.mean)/sqrt(dispersion)
               
-              if (prior == "mde" | prior == "mt") {
-                out <- mix(prior = prior, prior.df = prior.df, prior.scale = prior.scale, 
-                           group.vars = group.vars, beta0 = beta0, ss = ss, theta = theta, p = p)
+              if (prior == "mde") {
+                out <- mix(prior.scale = prior.scale, group.vars = group.vars, beta0 = beta0, 
+                           ss = ss, theta = theta, p = p)
                 prior.scale <- out[[1]]   
                 p <- out[[2]]
                 theta <- out[[3]]
@@ -477,8 +477,8 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
                 prior.sd = prior.sd, dispersion = dispersion, group = group, group.vars = group.vars, 
                 ungroup.vars = ungroup.vars, method.coef = method.coef, family = family )
     
-    if (prior == "t" | prior == "mt") out$prior.df <- prior.df
-    if (prior == "mde" | prior == "mt") {
+    if (prior == "t") out$prior.df <- prior.df
+    if (prior == "mde") {
       out$p <- p[unlist(group.vars)]
       out$ptheta <- theta
       out$ss <- ss
@@ -494,7 +494,7 @@ update.prior.sd <- function (prior, beta0, prior.scale, prior.df, sd.x, min.x.sd
 {
   prior.scale <- prior.scale + 1e-04
   J <- length(beta0)
-  if (prior == "t" | prior == "mt")   
+  if (prior == "t")   
     prior.sd <- sqrt((beta0^2 + prior.df * prior.scale^2)/(1 + prior.df)) 
   if (prior == "de" | prior == "mde")     # prior.scale = lamda in Exp(1/(2*lamda^2) )   
     prior.sd <- sqrt(abs(beta0) * prior.scale)
@@ -506,26 +506,20 @@ update.prior.sd <- function (prior, beta0, prior.scale, prior.df, sd.x, min.x.sd
   prior.sd            
 }
 
-mix <- function(prior, prior.df, prior.scale, group.vars, beta0, ss, theta, p)
+mix <- function(prior.scale, group.vars, beta0, ss, theta, p)
 {
   for (j in 1:length(group.vars)) {  # group-specific probability
     vars <- group.vars[[j]]
     b0 <- beta0[vars]
-    Df <- prior.df[vars][1]
-    if (prior == "mde"){
-      den0 <- (2 * ss[1])^(-1) * exp(-abs(b0)/ss[1]) # de density
-      den1 <- (2 * ss[2])^(-1) * exp(-abs(b0)/ss[2]) 
-    }
-    if (prior == "mt"){
-      den0 <- (ss[1])^(-1) * (1 + b0^2/(Df * ss[1]^2))^(-(Df + 1)/2) # t density
-      den1 <- (ss[2])^(-1) * (1 + b0^2/(Df * ss[2]^2))^(-(Df + 1)/2)
-    }
+    den0 <- (2 * ss[1])^(-1) * exp(-abs(b0)/ss[1]) # de density
+    den1 <- (2 * ss[2])^(-1) * exp(-abs(b0)/ss[2]) 
     p[vars] <- theta[j] * den1 / (theta[j] * den1 + (1-theta[j]) * den0 + 1e-10)
     prior.scale[vars] <- 1/((1-p[vars])/ss[1] + p[vars]/ss[2] + 1e-10)
     theta[j] <- mean(p[vars])
     theta[j] <- max(theta[j], 0.01)
     theta[j] <- min(theta[j], 0.99)
   } 
+  
   list(prior.scale = prior.scale, p = p, theta = theta)
 }
 
@@ -742,3 +736,4 @@ link.vars <- function(group.vars) {
 
 
 #*******************************************************************************************************
+
