@@ -12,7 +12,6 @@ export(plot.bh)
 
 export(measure.bh)
 export(measure.glm)
-export(measure.nb)
 export(measure.cox)
 export(measure.polr)
 export(cv.bh)
@@ -33,9 +32,7 @@ export(sim.y)
 export(sim.eta)
 export(sim.out)
 
-export(roc.auc)
 export(surv.curves)
-export(Cindex)
 export(aucCox)
 export(peCox)
 
