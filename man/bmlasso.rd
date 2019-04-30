@@ -4,18 +4,16 @@
 \alias{bmlasso}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-  Bayesian Spike-and-Slab Lasso or Ridge GLMs and Cox Models
+  Bayesian Spike-and-Slab Lasso Models
 }
 
 \description{
-  This function is to set up Bayesian GLMs or Cox models with spike-and-slab mixture double-exponential (mde) or t prior (mt) (called the Bayesian spike-and-slab mixture lasso or ridge), 
-  and to fit the model by incorporating EM steps into the fast coordinate descent algorithm. 
+  This function is to set up Bayesian GLMs or Cox models with spike-and-slab mixture double-exponential prior (called the Bayesian spike-and-slab mixture lasso), and to fit the model by incorporating EM steps into the fast coordinate descent algorithm. 
 }
 
 \usage{    
-  bmlasso(x, y, family = c("gaussian", "binomial", "poisson", "cox"), weights = rep(1, nrow(x)), offset = NULL, epsilon = 1e-04, maxit = 50, 
-          init = NULL, group = NULL, prior = c("mde", "mt"), prior.df = 1, ss = c(0.04, 0.5),
-          Warning = FALSE, verbose = TRUE) 
+  bmlasso(x, y, family = c("gaussian", "binomial", "poisson", "cox"), weights = rep(1, nrow(x)), offset = NULL, epsilon = 1e-04, maxit = 50, init = NULL, group = NULL, ss = c(0.04, 0.5),
+          Warning = FALSE, verbose = FALSE) 
 }
 
 %- maybe also 'usage' for other objects documented here.
@@ -51,15 +49,8 @@
   The mixture double-exponential prior is only used for grouped predictors. 
   For ungrouped predictors, the prior is double-exponential or t. 
 }
-  \item{prior}{
-  Two types of priors for the coefficents; spike-and-slab mixture double-exponential (\code{mde}),
-  and spike-and-slab mixture t (\code{mt}). 
-}
-  \item{prior.df}{
-  prior degrees of freedom in the \code{mt} prior: default is \code{1} (leading to Cauchy prior).  
-}
   \item{ss}{
-   a vector of two positive scale values for the spike-and-slab mixture double-exponential or t prior, allowing for different scales for different predictors, 
+   a vector of two positive scale values for the spike-and-slab mixture double-exponential prior, allowing for different scales for different predictors, 
    leading to different amount of shrinkage. smaller scale values give stronger shrinkage.
 }
   \item{Warning}{
@@ -71,13 +62,12 @@
 }
 
 \details{
-  This function sets up Bayesian GLMs and Cox models with spike-and-slab mixture double-exponential or t prior (Bayesian spike-and-slab mixture lasso or ridge), and fits the model 
+  This function sets up Bayesian GLMs and Cox models with spike-and-slab mixture double-exponential prior (Bayesian spike-and-slab mixture lasso), and fits the model 
 by incorporating EM steps into the fast coordinate descent algorithm implemented in the package \bold{glmnet}. 
 It is an alteration of the function \code{\link{glmnet}} in the package \bold{glmnet}. 
   
-  The mixture double-exponential or t prior is used for grouped predictors: \code{coefficients ~ DE(0, (1-d)*ss[1]+d*ss[2]), d ~ Bin(1; theta)}, 
-  or \code{coefficients ~ t(prior.df, 0, (1-d)*ss[1]+d*ss[2]), d ~ Bin(1; theta)};
-The mixture priors allow different shrinkage (penalty) values for different predictors.
+  The mixture double-exponential prior is used for grouped predictors: \code{coefficients ~ DE(0, (1-d)*ss[1]+d*ss[2]), d ~ Bin(1; theta)};
+The mixture prior allows different shrinkage (penalty) values for different predictors.
    
 }
 

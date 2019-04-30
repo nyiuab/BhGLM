@@ -19,9 +19,9 @@
 bcoxph(formula, data, weights, subset, na.action, init, 
        control = coxph.control(eps = 1e-04, iter.max = 50), 
        ties = c("breslow", "efron"), tt,  
-       prior = c("de", "t", "mde", "mt"), group = NULL, method.coef, 
+       prior = c("t", "de", "mde"), group = NULL, method.coef, 
        prior.sd = 1, prior.scale = 0.5, prior.df = 1, prior.mean = 0, ss = c(0.04, 0.5), 
-       Warning = FALSE, verbose = TRUE, ...)
+       Warning = FALSE, verbose = FALSE, ...)
 }
 
 %- maybe also 'usage' for other objects documented here.
@@ -112,11 +112,6 @@ ss = c(0.04, 0.5)
 f3 = bcoxph(y ~ ., data = x, prior = "mde", ss = ss)
 # summary.bh(f3)
 plot.bh(f3, threshold = 0.01, gap = gap, main = "Cox with mixture double exponential") 
-
-ss = c(0.04, 0.5) 
-f4 = bcoxph(y ~ ., data = x, prior = "mt", ss = ss)
-# summary.bh(f4)
-plot.bh(f4, threshold = 0.01, gap = gap, main = "Cox with mixture t") 
 
 
 # group-wise update

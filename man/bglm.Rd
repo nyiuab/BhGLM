@@ -9,7 +9,7 @@
 
 \description{
   This function is to set up Bayesian hierarchical GLMs, and to fit the model using the EM-IWLS algorithm. 
-  Several types of priors on each coefficient can be used: double-exponential (de), Student-t (t), spike-and-slab mixture double-exponential (mde), and spike-and-slab mixture t (mt).  
+  Three types of priors on each coefficient can be used: Student-t (t), double-exponential (de), and spike-and-slab mixture double-exponential (mde).  
   The Bayesian hierarchical GLMs include various models as special cases, e.g., classical GLMs, ridge regression, and Bayesian lasso. 
   It can be used for analyzing general data and large-scale and highly-correlated variables 
   (for example, detecting disease-associated factors and predicting phenotypes).
@@ -18,9 +18,9 @@
 \usage{    
 bglm(formula, family = gaussian, data, offset, weights, subset, na.action, 
     start = NULL, etastart, mustart, control = glm.control(epsilon = 1e-04, maxit = 50), 
-    prior = c("de", "t", "mde", "mt"), group = NULL, method.coef,
+    prior = c("t", "de", "mde"), group = NULL, method.coef,
     dispersion = 1, prior.sd = 0.5, prior.scale = 0.5, prior.df = 1, prior.mean = 0, ss = c(0.04, 0.5), 
-    Warning = FALSE, verbose = TRUE, ...)  
+    Warning = FALSE, verbose = FALSE, ...)  
 }
 
 %- maybe also 'usage' for other objects documented here.
@@ -33,8 +33,7 @@ bglm(formula, family = gaussian, data, offset, weights, subset, na.action,
   also can be Negative Binomial (\code{NegBin or "NegBin"}).
 }
   \item{prior}{
-  Several types of priors for the coefficents; double-exponetial (\code{"de"}), Student-t (\code{"t"}), spike-and-slab mixture double-exponential (\code{"mde"}),
-  and spike-and-slab mixture t (\code{"mt"}). 
+  Several types of priors for the coefficents; double-exponetial (\code{"de"}), Student-t (\code{"t"}), and spike-and-slab mixture double-exponential (\code{"mde"}). 
   The mixture priors are only used for grouped predictors (defined by \code{group}). 
   For ungrouped predictors, the priors are double-exponential or t with scale = prior.scale.  
 }
@@ -71,7 +70,7 @@ bglm(formula, family = gaussian, data, offset, weights, subset, na.action,
   prior mean for each coefficient.
 }
   \item{ss}{
-   a vector of two positive scale values for the mixture priors \code{mde} and \code{mt}, allowing for different scales for different predictors, 
+   a vector of two positive scale values for the mixture prior \code{mde}, allowing for different scales for different predictors, 
    leading to different amount of shrinkage. smaller scale values give stronger shrinkage.
 }
   \item{Warning}{
@@ -93,7 +92,6 @@ It is an alteration of the standard function \code{\link{glm}} for fitting class
 for t, \code{coefficients ~ t(prior.df, prior.mean, prior.sd^2)};
 for de, \code{coefficients ~ DE(prior.mean, prior.scale)};
 for mde, \code{coefficients ~ DE(prior.mean, (1-d)*ss[1]+d*ss[2]), d ~ Bin(1; theta)};
-for mt, \code{coefficients ~ t(prior.df, prior.mean, (1-d)*ss[1]+d*ss[2]), d ~ Bin(1; theta)};
 
 These priors are expressed hierarchically. Therefore, EM algorithms can be used to fit the models.
 
@@ -104,7 +102,7 @@ These priors are expressed hierarchically. Therefore, EM algorithms can be used 
 4) If \code{prior.scale = prior.df = 0}, the t is Jeffrey prior.
    
   The EM-IWLS algorithm estimates posterior modes of the parameters, and incorporates an EM algorithm into the iterative weighted least squares (IWLS) as implemented in the function \code{\link{glm}}. 
-The algorithm treats the variances \code{prior.sd^2} and the indicator variables (for the mixture priors \code{mde} and \code{mt}) as missing data.
+The algorithm treats the variances \code{prior.sd^2} and the indicator variables (for the mixture prior \code{mde}) as missing data.
 
   The computational cost of the algorithm is mainly in the step of jointly updating coefficients, because this step needs to calculate the inverse of a large matrix. 
 This function implements two methods to update the coefficients, i.e.,  jointly updating all coefficients, or updating a group of coefficients at a time and proceeding by cycling through all the groups at each iteration. 
@@ -172,11 +170,6 @@ plot.bh(f2, vars.rm = 1, threshold = 0.01, gap = gap, main = "t")
 ss = c(0.04, 0.5) 
 f3 = bglm(y ~ ., data = x, family = fam, prior = "mde", ss = ss)   
 plot.bh(f3, vars.rm = 1, threshold = 0.01, gap = gap, main = "mde")  
-
-ss = c(0.04, 0.5)
-f4 = bglm(y ~ ., data = x, family = fam, prior = "mt", ss = ss, prior.df=Inf)   
-plot.bh(f4, vars.rm = 1, threshold = 0.01, gap = gap, main = "mt")  
-
 
 # group-wise update (can be much faster if m is large)
 ps = 0.05

@@ -65,12 +65,8 @@ For binomial and polr models, \code{measures} also includes:
 \item{misclassification}{estimate of misclassification error.}
 
 For Cox models, \code{measures} includes:
-\item{CVPL}{Houwelinggen's cross-validated partial log-likelihood.}
-\item{pl}{partial log-likelihood using cross-validated prognostic index.}
+\item{deviance}{deviance using cross-validated prognostic index.}
 \item{Cindex}{concordance index.}
-
-If \code{ncv > 1}, also return:
-\item{detail}{values for each cross-validation.}
 
 }
 
