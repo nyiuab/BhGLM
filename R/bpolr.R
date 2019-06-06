@@ -110,6 +110,8 @@ bpolr <- function (formula, data, weights, start, subset, na.action,
     if (length(prior.df) < J) 
       prior.df <- c(prior.df, rep(prior.df[length(prior.df)], J - length(prior.df)) )
 
+    prior.scale <- prior.scale / autoscale(x, min.x.sd=1e-04)
+    
     prior.counts.for.bins <- 1/(q + 1)
     if (length(prior.counts.for.bins) == 1) prior.counts.for.bins <- rep(prior.counts.for.bins, q + 1)
     

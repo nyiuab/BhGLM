@@ -177,7 +177,7 @@ cv.bh.lasso <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
   y.obj <- object$y
   n <- NROW(y.obj)
   offset <- object$offset
-  if (!offset) offset <- NULL
+#  if (!offset) offset <- NULL
   init <- object$coefficients
   init <- init[!names(init)%in%"(Intercept)"]
   
@@ -198,10 +198,10 @@ cv.bh.lasso <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
       omit <- which(foldid[, k] == i)
       subset1[omit] <- FALSE
       if (any(class(object) %in% "glmNet"))
-        fit <- update(object, x=x.obj[-omit, ], y=y.obj[-omit], weights=object$weights[-omit], offset=offset[-omit],
+        fit <- update(object, x=x.obj[-omit, ], y=y.obj[-omit], offset=offset[-omit],
                       lambda=object$lambda, verbose=FALSE)
       if (any(class(object) %in% "bmlasso"))
-        fit <- update(object, x=x.obj[-omit, ], y=y.obj[-omit], weights=object$weights[-omit], offset=offset[-omit], 
+        fit <- update(object, x=x.obj[-omit, ], y=y.obj[-omit], offset=offset[-omit], 
                       init=init, verbose=FALSE)
       if (any(class(object) %in% "GLM")) {
         lp[omit] <- cbind(1, x.obj[omit, , drop=FALSE]) %*% fit$coefficients

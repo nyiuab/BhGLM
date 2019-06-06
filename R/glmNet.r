@@ -1,8 +1,7 @@
 
 #*******************************************************************************
 
-glmNet <- function (x, y, family = c("gaussian", "binomial", "poisson", "cox"), 
-                    weights = rep(1, nrow(x)), offset = NULL,
+glmNet <- function (x, y, family = c("gaussian", "binomial", "poisson", "cox"), offset = NULL,
                     alpha = c(1, 0.5, 0), lambda, penalty.factor = rep(1, ncol(x)), 
                     nfolds = 10, ncv = 10, verbose = FALSE)
 {
@@ -10,14 +9,19 @@ glmNet <- function (x, y, family = c("gaussian", "binomial", "poisson", "cox"),
   require(glmnet)
   start.time <- Sys.time()
   call <- match.call()
+  x <- as.matrix(x)
+  nobs <- nrow(x)
+  if (NROW(y) != nobs) stop("nobs of 'x' and 'y' are different")
+  if (is.null(colnames(x))) colnames(x) <- paste("x", 1:ncol(x), sep = "")
   if (any(is.na(x)) | any(is.na(y))) {
     a <- apply(cbind(y,x), 1, function(z) !any(is.na(z)))
     y <- y[a]
     x <- x[a,]
   }
-  x <- as.matrix(x)
-  if (NROW(x) != NROW(y)) stop("nobs of 'x' and 'y' are different")
-  if (is.null(colnames(x))) colnames(x) <- paste("x", 1:ncol(x), sep = "")
+  if (!is.null(offset)){
+    if (length(offset) != nobs) stop("nobs of 'x' and 'offset' are different")
+    offset <- offset[a]
+  }
   family <- family[1]
   if (family == "cox")  
     if (!is.Surv(y)) stop("'y' should be a 'Surv' object")
@@ -32,21 +36,21 @@ glmNet <- function (x, y, family = c("gaussian", "binomial", "poisson", "cox"),
   if (missing(lambda)) {
     lam <- rep(NA, ncv)
     for (i in 1:ncv) { 
-      cv.f <- cv.glmnet(x = x, y = y, family = family, weights = weights, offset = offset, alpha = alpha, nfolds = nfolds, grouped = TRUE,
+      cv.f <- cv.glmnet(x = x, y = y, family = family, offset = offset, alpha = alpha, nfolds = nfolds, grouped = TRUE,
                         penalty.factor = penalty.factor, standardize = FALSE)
       lam[i] <- cv.f$lambda.min
       if (verbose & ncv > 1) cat(i, "/", ncv, "\n")
     }
     lambda <- mean(lam)
   }
-  f <- glmnet(x = x, y = y, family = family, weights = weights, offset = offset, alpha = alpha, lambda = lambda,
+  f <- glmnet(x = x, y = y, family = family, offset = offset, alpha = alpha, lambda = lambda,
               penalty.factor = penalty.factor, standardize = FALSE)
     
   f$coefficients <- as.numeric(coef(f))
   names(f$coefficients) <- rownames(coef(f))
   f$linear.predictors <- predict(f, newx = x, type ="link", offset = offset)
   if (family == "gaussian")
-   f$dispersion <- bglm(y ~ f$linear.predictors - 1, weights = weights, start = 1, prior = "de", prior.mean = 1, prior.scale = 0, verbose = FALSE)$dispersion
+   f$dispersion <- bglm(y ~ f$linear.predictors - 1, start = 1, prior = "de", prior.mean = 1, prior.scale = 0, verbose = FALSE)$dispersion
   
   f$x <- x
   f$y <- y
@@ -55,7 +59,7 @@ glmNet <- function (x, y, family = c("gaussian", "binomial", "poisson", "cox"),
   f$penalty.factor <- penalty.factor 
   if (alpha == 1) f$prior.scale <- mean(1/(f$lambda * penalty.factor * nrow(x)))
   if (alpha == 0) f$prior.sd <- mean(sqrt(1/(f$lambda * penalty.factor * nrow(x))))
-  f$weights <- weights
+  f$offset <- offset
   f$aic <- deviance(f) + 2 * f$df
   
   f$call <- call

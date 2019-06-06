@@ -192,34 +192,4 @@ rmvnorm <- function (n, mean = rep(0, nrow(sigma)), sigma = diag(length(mean)),
     else retval
 }
 
-
-decom <- function (sigma, method = c("svd", "eigen", "chol")) 
-{
-    if (!isSymmetric(sigma, tol = sqrt(.Machine$double.eps), 
-        check.attributes = FALSE)) {
-        stop("sigma must be a symmetric matrix")
-    }
-    method <- match.arg(method)
-    R <- if (method == "eigen") {
-        ev <- eigen(sigma, symmetric = TRUE)
-        if (!all(ev$values >= -sqrt(.Machine$double.eps) * abs(ev$values[1]))) {
-            warning("sigma is numerically not positive definite")
-        }
-        t(ev$vectors %*% (t(ev$vectors) * sqrt(ev$values)))
-    }
-    else if (method == "svd") {
-        s. <- svd(sigma)
-        if (!all(s.$d >= -sqrt(.Machine$double.eps) * abs(s.$d[1]))) {
-            warning("sigma is numerically not positive definite")
-        }
-        t(s.$v %*% (t(s.$u) * sqrt(s.$d)))
-    }
-    else if (method == "chol") {
-        R <- chol(sigma, pivot = TRUE)
-        R[, order(attr(R, "pivot"))]
-    }
-
-    R
-}
-
 #*******************************************************************************

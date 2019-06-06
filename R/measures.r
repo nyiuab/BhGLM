@@ -123,19 +123,21 @@ measure.glm <- function(y, y.fitted, family, dispersion = 1)
 
 measure.polr <- function(y, y.fitted) 
 {
+  if (!requireNamespace("pROC")) install.packages("pROC")
+  require(pROC)
   pred <- y.fitted
   if (is.vector(pred)) pred <- t(as.matrix(pred))
-  if (NROW(probs)!=NROW(y))
+  if (NROW(pred)!=NROW(y))
     stop("y and y.fitted should be the same length.", call. = FALSE)
-  auc <- mse <- misclassification <- 0
+  AUC <- mse <- misclassification <- 0
   y.level <- levels(y)
   for (k in 1:NCOL(pred)) {
     y1 <- ifelse(y == y.level[k], 1, 0)
-    auc <- auc + roc.auc(y1, pred[, k], plot = FALSE)$auc
+    AUC <- AUC + as.numeric(auc(y1, pred[, k]))
     misclassification <- misclassification + mean(abs(y1 - pred[, k]) > 0.5, na.rm = TRUE)
     mse <- mse + mean((y1 - pred[, k])^2, na.rm = TRUE)
   }
-  auc <- auc/NCOL(pred)
+  AUC <- AUC/NCOL(pred)
   mse <- mse/NCOL(pred)
   misclassification <- misclassification/NCOL(pred)
   L <- rep(NA, NROW(pred))
@@ -147,7 +149,7 @@ measure.polr <- function(y, y.fitted)
   L <- ifelse(L==0, 1e-04, L)
   deviance <- -2 * sum(log(L))
   
-  measures <- list(deviance = deviance, auc = auc, mse = mse, misclassification = misclassification)
+  measures <- list(deviance = deviance, auc = AUC, mse = mse, misclassification = misclassification)
   round(unlist(measures), digits=3)
 }
 

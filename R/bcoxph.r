@@ -287,8 +287,8 @@ bcoxph.fit <- function(x, y, offset = rep(0, nobs), weights = rep(1, nobs), init
   group <- d$group
   group.vars <- d$group.vars
   ungroup.vars <- d$ungroup.vars
-#  covars <- d$ungroup.vars 
-#  linked.vars <- d$linked.vars 
+
+  prior.scale <- prior.scale / autoscale(x, min.x.sd)
     
   g0 <- Grouping(all.var = colnames(x), group = method.coef)
   group0 <- g0$group.vars
@@ -299,9 +299,9 @@ bcoxph.fit <- function(x, y, offset = rep(0, nobs), weights = rep(1, nobs), init
   # for mixture prior
   if (prior == "mde") {
     if (length(ss) != 2) stop("ss should have two positive values")
-    theta <- rep(0.5, length(group.vars))
-    p <- rep(0.5, length(prior.sd))
-    names(p) <- names(prior.sd)
+    gvars <- unlist(group.vars)
+    theta <- p <- rep(0.5, length(gvars))
+    names(theta) <- names(p) <- gvars
   }
   
   names(init) <- colnames(x)
@@ -323,11 +323,10 @@ bcoxph.fit <- function(x, y, offset = rep(0, nobs), weights = rep(1, nobs), init
       beta0 <- coefs.hat - prior.mean
       
       if (prior == "mde") {
-        out <- mix(prior.scale = prior.scale, group.vars = group.vars, beta0 = beta0, 
-                   ss = ss, theta = theta, p = p)
-        prior.scale <- out[[1]]   
+        out <- update.scale.p(b0=beta0[gvars], ss=ss, theta=theta)
+        prior.scale[gvars] <- out[[1]]   
         p <- out[[2]]
-        theta <- out[[3]]
+        theta <- update.ptheta.group(group.vars=group.vars, p=p)
       }
       
       prior.sd <- update.prior.sd(prior = prior, beta0 = beta0, prior.scale = prior.scale, 
@@ -405,7 +404,7 @@ bcoxph.fit <- function(x, y, offset = rep(0, nobs), weights = rep(1, nobs), init
   fit$ungroup.vars <- ungroup.vars
   fit$method.coef <- method.coef
   if (prior == "mde") {
-    fit$p <- p[unlist(group.vars)]
+    fit$p <- p
     fit$ptheta <- theta
     fit$ss <- ss
   }

@@ -1,5 +1,5 @@
 
-#*******************************************************************************
+#*************************************************************************************************************
 
 bglm <- function (formula, family = gaussian, data, offset, weights, subset, na.action, 
            start = NULL, etastart, mustart, control = glm.control(epsilon = 1e-04, maxit = 50), 
@@ -88,7 +88,7 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
                mustart = NULL, offset = rep(0, nobs), family = gaussian(), control = glm.control(), intercept = TRUE,  
                prior = "de", group = NULL, method.coef = 1, 
                dispersion = 1, prior.mean = 0, prior.sd = 0.5, prior.scale = 1, prior.df = 1, ss = c(0.05, 0.1), 
-               s.glm = "glm", xs = NULL, Warning = FALSE)
+               Warning = FALSE)  # s.glm = "glm", xs = NULL, 
 {
     ss <- sort(ss)
     ss <- ifelse(ss <= 0, 0.001, ss)
@@ -109,7 +109,10 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
     group <- d$group
     group.vars <- d$group.vars
     ungroup.vars <- d$ungroup.vars
-  
+    
+    prior.scale <- prior.scale / autoscale(x, min.x.sd)
+    if (family[[1]]=="gaussian") prior.scale <- prior.scale * sd(y)
+    
     x0 <- x
     if (intercept) x0 <- x[, -1, drop = FALSE] 
     g0 <- Grouping(all.var = colnames(x0), group = method.coef)
@@ -122,9 +125,9 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
     # for mixture prior
     if (prior == "mde") {
       if (length(ss) != 2) stop("ss should have two positive values")
-      theta <- rep(0.5, length(group.vars))
-      p <- rep(0.5, length(prior.sd))
-      names(p) <- names(prior.sd)
+      gvars <- unlist(group.vars)
+      theta <- p <- rep(0.5, length(gvars))
+      names(theta) <- names(p) <- gvars
     }
     
     # for negative binomial model
@@ -242,12 +245,13 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
             z <- (eta - offset)[good] + (y - mu)[good]/mu.eta.val[good]
             w <- sqrt((weights[good] * mu.eta.val[good]^2)/varmu[good])
             ngoodobs <- as.integer(nobs - sum(!good))
-            
-            if (s.glm == "truncated") {
-              out <- truncated(y = y, s.x = s.x, eta = eta, Sd = sqrt(dispersion)) 
-              z <- out[[1]] - offset
-              w <- out[[2]]
-            }
+
+# not used                       
+#            if (s.glm == "truncated") {
+#              out <- truncated(y = y, s.x = s.x, eta = eta, Sd = sqrt(dispersion)) 
+#              z <- out[[1]] - offset
+#              w <- out[[2]]
+#            }
             
             w <- ifelse(w == 0, 1e-04, w) # I add
             
@@ -255,11 +259,10 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
               beta0 <- (coefs.hat - prior.mean)/sqrt(dispersion)
               
               if (prior == "mde") {
-                out <- mix(prior.scale = prior.scale, group.vars = group.vars, beta0 = beta0, 
-                           ss = ss, theta = theta, p = p)
-                prior.scale <- out[[1]]   
+                out <- update.scale.p(b0=beta0[gvars], ss=ss, theta=theta)
+                prior.scale[gvars] <- out[[1]]   
                 p <- out[[2]]
-                theta <- out[[3]]
+                theta <- update.ptheta.group(group.vars=group.vars, p=p)
               }
               
               prior.sd <- update.prior.sd(prior = prior, beta0 = beta0, prior.scale = prior.scale, 
@@ -365,7 +368,7 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
               if (n.df <= 0) n.df <- n.df0
               dispersion <- Sum/n.df 
             } 
-            if (s.glm == "truncated") dispersion <- (dispersion + dispersionold)/2
+#            if (s.glm == "truncated") dispersion <- (dispersion + dispersionold)/2
             dispersion <- ifelse(dispersion > 1e+04,1e+04, dispersion) 
             dispersion <- ifelse(dispersion < 1e-04, 1e-04, dispersion)
             
@@ -479,7 +482,7 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
     
     if (prior == "t") out$prior.df <- prior.df
     if (prior == "mde") {
-      out$p <- p[unlist(group.vars)]
+      out$p <- p
       out$ptheta <- theta
       out$ss <- ss
     }
@@ -506,38 +509,28 @@ update.prior.sd <- function (prior, beta0, prior.scale, prior.df, sd.x, min.x.sd
   prior.sd            
 }
 
-mix <- function(prior.scale, group.vars, beta0, ss, theta, p)
+update.scale.p <- function(b0, ss, theta) 
 {
-  for (j in 1:length(group.vars)) {  # group-specific probability
-    vars <- group.vars[[j]]
-    b0 <- beta0[vars]
-    den0 <- (2 * ss[1])^(-1) * exp(-abs(b0)/ss[1]) # de density
-    den1 <- (2 * ss[2])^(-1) * exp(-abs(b0)/ss[2]) 
-    p[vars] <- theta[j] * den1 / (theta[j] * den1 + (1-theta[j]) * den0 + 1e-10)
-    prior.scale[vars] <- 1/((1-p[vars])/ss[1] + p[vars]/ss[2] + 1e-10)
-    theta[j] <- mean(p[vars])
-    theta[j] <- max(theta[j], 0.01)
-    theta[j] <- min(theta[j], 0.99)
-  } 
+  den0 <- (2 * ss[1])^(-1) * exp(-abs(b0)/ss[1]) # de density
+  den1 <- (2 * ss[2])^(-1) * exp(-abs(b0)/ss[2]) 
+  p <- theta * den1 / (theta * den1 + (1 - theta) * den0 + 1e-10)
+  scale <- 1/((1 - p)/ss[1] + p/ss[2] + 1e-10)
   
-  list(prior.scale = prior.scale, p = p, theta = theta)
+  list(scale = scale, p = p)
 }
 
-truncated <- function(y, s.x, eta, Sd) #for extreme phenotype sampling
+update.ptheta.group <- function(group.vars, p) # group-specific probability
 {
-  s.x <- ifelse (s.x == -Inf, -1e+10, s.x)
-  s.x <- ifelse (s.x == Inf, 1e+10, s.x)
-  t1 <- (s.x[, 1] - eta)/Sd
-  t2 <- (s.x[, 2] - eta)/Sd
-  t3 <- (s.x[, 3] - eta)/Sd
-  t4 <- (s.x[, 4] - eta)/Sd
-  y.add <- (dnorm(t2) - dnorm(t1) + dnorm(t4) - dnorm(t3)) / (pnorm(t2) - pnorm(t1) + pnorm(t4) - pnorm(t3) + 1e-10) 
-  v.add <- (t2 * dnorm(t2) - t1 * dnorm(t1) + t4 * dnorm(t4) - t3 * dnorm(t3))/(pnorm(t2) - pnorm(t1) + pnorm(t4) - pnorm(t3) + 1e-10)
-  w <- sqrt(abs(1 - v.add - y.add^2))
-  z <- eta + (y - eta + Sd * y.add)/(w^2 + 1e-10)
-  out <- list(z = z, w = w)
-  out
-}  
+  theta <- p
+  for (j in 1:length(group.vars)) {  
+    vars <- group.vars[[j]]
+    theta[vars] <- mean(p[vars])
+  } 
+  theta <- ifelse(theta < 0.01, 0.01, theta)
+  theta <- ifelse(theta > 0.99, 0.99, theta)
+  
+  theta
+}
 
 
 # from MASS
@@ -590,11 +583,10 @@ NegBin <- function (theta = 3, link = "log")
                  linkinv = stats$linkinv, variance = variance, dev.resids = dev.resids,
                  aic = aic, mu.eta = stats$mu.eta, initialize = initialize,
                  validmu = validmu, valideta = stats$valideta, simulate = simfun, theta = .Theta),
-            class = "family")
+                 class = "family")
 }
 
-#*******************************************************************************
-
+#************************************************************************************
 
 prepare <- function(x, intercept, prior.mean, prior.sd, prior.scale, prior.df, group)
 {
@@ -606,18 +598,19 @@ prepare <- function(x, intercept, prior.mean, prior.sd, prior.scale, prior.df, g
     ungroup.vars <- g$ungroup.vars
     covars <- g$ungroup.vars  
     
-    if (is.list(group)) 
-    if (length(unlist(group)) > length(unique(unlist(group)))) {
-      x1 <- as.data.frame(x0)
-      x1 <- x1[, c(covars, unlist(group))]
-      g <- c(length(ungroup.vars), length(ungroup.vars) + cumsum(lapply(group, length)))
-      for (j in 1:(length(group)-1))
-        group.vars[[j]] <- colnames(x1[, (g[j]+1):g[j+1]])
-      x1 <- as.matrix(x1)
-      x <- x1 
-      if (intercept) {
-        x <- cbind(1, x)
-        colnames(x)[1] <- "(Intercept)"
+    if (is.list(group)) { # for overlap groups
+      if (length(unlist(group)) > length(unique(unlist(group)))) {
+        x1 <- as.data.frame(x0)
+        x1 <- x1[, c(covars, unlist(group))]
+        g <- c(length(ungroup.vars), length(ungroup.vars) + cumsum(lapply(group, length)))
+        for (j in 1:(length(group)-1))
+          group.vars[[j]] <- colnames(x1[, (g[j]+1):g[j+1]])
+        x1 <- as.matrix(x1)
+        x <- x1 
+        if (intercept) {
+          x <- cbind(1, x)
+          colnames(x)[1] <- "(Intercept)"
+        }
       }
     }
     
@@ -638,13 +631,13 @@ prepare <- function(x, intercept, prior.mean, prior.sd, prior.scale, prior.df, g
     prior.mean <- prior.mean[1:J]
     prior.scale <- prior.scale[1:J]
     prior.df <- prior.df[1:J]
-    prior.df <- ifelse(prior.df == Inf, 1e+10, prior.df)
+    prior.df <- ifelse(prior.df==Inf, 1e+10, prior.df)
     
     if (is.null(prior.sd)) prior.sd <- prior.scale + 0.2   ## + 0.2 to avoid prior.sd=0
     if (length(prior.sd) < J)  
       prior.sd <- c(prior.sd, rep(prior.sd[length(prior.sd)], J - length(prior.sd)) )
     prior.sd <- prior.sd[1:J]
-    sd.x <- apply(x, 2, sd, na.rm = TRUE)
+    sd.x <- apply(x, 2, sd, na.rm=TRUE)
     min.x.sd <- 1e-04
     prior.sd <- ifelse(sd.x < min.x.sd, 1e-04, prior.sd)
     if (intercept) prior.sd[1] <- 1e+10 
@@ -654,50 +647,29 @@ prepare <- function(x, intercept, prior.mean, prior.sd, prior.scale, prior.df, g
     if (intercept) covars <- c(colnames(x)[1], covars)
     if (!is.null(covars)) prior.mean[covars] <- 0
     
-#    linked.vars <- NULL     
-#    if (length(group.vars) > 1) {
-#      all.group.vars <- unique(unlist(group.vars))
-#      if (length(group.vars) != length(all.group.vars))
-#        linked.vars <- link.vars(group.vars = group.vars)
-#      else {
-#        linked.vars <- group.vars
-#        names(linked.vars) <- all.group.vars
-#      }
-#    }
-    
-    list(x = x, prior.mean = prior.mean, prior.sd = prior.sd, prior.scale = prior.scale, 
-         prior.df = prior.df, sd.x = sd.x, min.x.sd = min.x.sd,
-         group = group, group.vars = group.vars, ungroup.vars = ungroup.vars)
-        # covars = covars) #, linked.vars = linked.vars)
-}    
-    
+    list(x=x, prior.mean=prior.mean, prior.sd=prior.sd, prior.scale=prior.scale, prior.df=prior.df, 
+         sd.x=sd.x, min.x.sd=min.x.sd,
+         group=group, group.vars=group.vars, ungroup.vars=ungroup.vars)
+}  
+
 Grouping <- function(all.var, group) 
 { 
   n.vars <- length(all.var)
   group.vars <- list()
   
   if (is.list(group)) group.vars <- group
-
-  if (!is.list(group) & !is.matrix(group)){
-    if (is.numeric(group) & length(group) > 1) 
-      group <- group  #group[length(group)] <- n.vars
-    if (is.numeric(group) & length(group) == 1)
+  else {
+    if (is.numeric(group) & length(group)>1) { 
+      group <- sort(group)  
+      if (group[length(group)] > n.vars) stop("wrong grouping")
+    }
+    if (is.numeric(group) & length(group)==1)
       group <- as.integer(seq(0, n.vars, length.out = n.vars/group + 1))
     if (is.null(group)) group <- c(0, n.vars)
     group <- unique(group)
     for (j in 1:(length(group) - 1))
       group.vars[[j]] <- all.var[(group[j] + 1):group[j + 1]]
   }
-  
-  if (is.matrix(group)){
-    rownames(group) <- all.var
-    colnames(group) <- paste("G", 1:ncol(group), sep = "")
-    group1 <- (group == 1)
-    for (j in 1:ncol(group))
-      group.vars[[j]] <- rownames(group)[group1[, j]]
-    group.matrix <- group
-  }
-  
   all.group.vars <- unique(unlist(group.vars))
   
   if (length(all.group.vars) == n.vars) ungroup.vars <- NULL
@@ -706,18 +678,12 @@ Grouping <- function(all.var, group)
   group.new <- c(length(ungroup.vars), length(ungroup.vars) + cumsum(lapply(group.vars, length)))
   var.new <- c(ungroup.vars, unlist(group.vars))
   
-  if (!is.matrix(group)){
-    group.matrix <- array(0, c(n.vars, length(group.vars)))
-    rownames(group.matrix) <- all.var
-    colnames(group.matrix) <- paste("G", 1:length(group.vars), sep = "")
-    for (j in 1:ncol(group.matrix)) group.matrix[group.vars[[j]], j] <- 1
-  }
-
-  list(group = group, group.vars = group.vars, ungroup.vars = ungroup.vars, 
-       group.new = group.new, var.new = var.new, group.matrix = group.matrix) 
+  list(group=group, group.vars=group.vars, ungroup.vars=ungroup.vars, 
+       group.new=group.new, var.new=var.new) 
 }
 
 
+# only used in simulation
 link.vars <- function(group.vars) {
   all.group.vars <- unique(unlist(group.vars))
   n.vars <- length(all.group.vars)
@@ -728,12 +694,37 @@ link.vars <- function(group.vars) {
     for (j in 1:n.groups)
       if (all.group.vars[i] %in% group.vars[[j]])
         linked.vars[[i]] <- unique(c(linked.vars[[i]], group.vars[[j]])) 
-    d <- which(linked.vars[[i]] %in% all.group.vars[i])
-    linked.vars[[i]] <- linked.vars[[i]][-d]
+      d <- which(linked.vars[[i]] %in% all.group.vars[i])
+      linked.vars[[i]] <- linked.vars[[i]][-d]
   }
   linked.vars
 }
 
+autoscale <- function(x, min.x.sd=1e-04)
+{
+  scale <- apply(x, 2, sd)
+  scale <- ifelse(scale<=min.x.sd, 1, scale)
+  two <- which(apply(x, 2, function(u) {length(unique(u))==2}))
+  scale[two] <- apply(x[, two, drop=F], 2, function(u){max(u)-min(u)})
+  scale
+}
 
-#*******************************************************************************************************
+#*************************************************************************
+# not used
+truncated <- function(y, s.x, eta, Sd) #for extreme phenotype sampling
+{
+  s.x <- ifelse (s.x == -Inf, -1e+10, s.x)
+  s.x <- ifelse (s.x == Inf, 1e+10, s.x)
+  t1 <- (s.x[, 1] - eta)/Sd
+  t2 <- (s.x[, 2] - eta)/Sd
+  t3 <- (s.x[, 3] - eta)/Sd
+  t4 <- (s.x[, 4] - eta)/Sd
+  y.add <- (dnorm(t2) - dnorm(t1) + dnorm(t4) - dnorm(t3)) / (pnorm(t2) - pnorm(t1) + pnorm(t4) - pnorm(t3) + 1e-10) 
+  v.add <- (t2 * dnorm(t2) - t1 * dnorm(t1) + t4 * dnorm(t4) - t3 * dnorm(t3))/(pnorm(t2) - pnorm(t1) + pnorm(t4) - pnorm(t3) + 1e-10)
+  w <- sqrt(abs(1 - v.add - y.add^2))
+  z <- eta + (y - eta + Sd * y.add)/(w^2 + 1e-10)
+  out <- list(z = z, w = w)
+  out
+}  
 
+#*************************************************************************

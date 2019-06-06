@@ -1,6 +1,6 @@
 
 
-bmlasso <- function(x, y, family = c("gaussian", "binomial", "poisson", "cox"), weights = rep(1, nrow(x)), offset = NULL,
+bmlasso <- function(x, y, family = c("gaussian", "binomial", "poisson", "cox"), offset = NULL,
                     epsilon = 1e-04, maxit = 50, init = NULL, 
                     group = NULL, ss = c(0.04, 0.5), Warning = FALSE, verbose = FALSE) 
 {
@@ -8,21 +8,26 @@ bmlasso <- function(x, y, family = c("gaussian", "binomial", "poisson", "cox"), 
   require(glmnet)
   start.time <- Sys.time()
   call <- match.call()
+  x <- as.matrix(x)
+  nobs <- nrow(x)
+  if (NROW(y) != nobs) stop("nobs of 'x' and 'y' are different")
+  if (is.null(colnames(x))) colnames(x) <- paste("x", 1:ncol(x), sep = "")
   if (any(is.na(x)) | any(is.na(y))) {
     a <- apply(cbind(y,x), 1, function(z) !any(is.na(z)))
     y <- y[a]
     x <- x[a,]
   }
-  x <- as.matrix(x)
-  if (NROW(x) != NROW(y)) stop("nobs of 'x' and 'y' are different")
-  if (is.null(colnames(x))) colnames(x) <- paste("x", 1:ncol(x), sep = "")
+  if (!is.null(offset)){
+    if (length(offset) != nobs) stop("nobs of 'x' and 'offset' are different")
+    offset <- offset[a]
+  }
   family <- family[1]
   if (family == "cox")  
     if (!is.Surv(y)) stop("'y' should be a 'Surv' object")
   if (family == "gaussian") y <- (y - mean(y))/sd(y)
   if (!is.null(init) & length(init) != ncol(x)) stop("give an initial value to each coefficient (not intercept)")
 
-  f <- bmlasso.fit(x = x, y = y, family = family, weights = weights, offset = offset, epsilon = epsilon, maxit = maxit, init = init,
+  f <- bmlasso.fit(x = x, y = y, family = family, offset = offset, epsilon = epsilon, maxit = maxit, init = init,
                    group = group, ss = ss, Warning = Warning)
   
   f$call <- call
@@ -40,7 +45,7 @@ bmlasso <- function(x, y, family = c("gaussian", "binomial", "poisson", "cox"), 
 
 # ******************************************************************************
 
-bmlasso.fit <- function(x, y, family = "gaussian", weights = rep(1, nrow(x)), offset = NULL, epsilon = 1e-04, maxit = 50, 
+bmlasso.fit <- function(x, y, family = "gaussian", offset = NULL, epsilon = 1e-04, maxit = 50, 
                         init = rep(0, ncol(x)), group = NULL, ss = c(0.04, 0.5), 
                         Warning = FALSE)
 {  
@@ -59,28 +64,28 @@ bmlasso.fit <- function(x, y, family = "gaussian", weights = rep(1, nrow(x)), of
   group <- d$group
   group.vars <- d$group.vars
   ungroup.vars <- d$ungroup.vars
+  prior.scale <- prior.scale / autoscale(x, min.x.sd=1e-04)
   if (intercept){
     x <- x[, -1]
     prior.scale <- prior.scale[-1]
   }
   
   if (length(ss) != 2) stop("ss should have two positive values")
-  theta <- rep(0.5, length(group.vars))
-  p <- rep(0.5, length(prior.scale))
-  names(p) <- names(prior.scale)  
+  gvars <- unlist(group.vars)
+  theta <- p <- rep(0.5, length(gvars))
+  names(theta) <- names(p) <- gvars 
   
   if (is.null(init)) {
     for (k in 1:5) {
       ps <- ss[1] + (k - 1) * 0.01
       if (family == "cox") ps <- min(ss[1] + (k - 1) * 0.01, 0.08)
-      f <- glmnet(x=x, y=y, family=family, weights=weights, offset=offset, alpha=0.95, 
+      f <- glmnet(x=x, y=y, family=family, offset=offset, alpha=0.95, 
                   lambda=1/(nrow(x) * ps), standardize=TRUE)
       b <- as.numeric(f$beta)
       if (any(b != 0)) break
     }
   }
   else b <- as.numeric(init)
-  
   names(b) <- colnames(x)
   b <- ifelse(b == 0, 0.001, b)
   init <- b
@@ -89,15 +94,14 @@ bmlasso.fit <- function(x, y, family = "gaussian", weights = rep(1, nrow(x)), of
   conv <- FALSE
   for (iter in 1:maxit){
     
-    out <- mix(prior.scale = prior.scale, group.vars = group.vars, 
-               beta0 = b, ss = ss, theta = theta, p = p)
-    prior.scale <- out[[1]]   
+    out <- update.scale.p(b0=b[gvars], ss=ss, theta=theta)
+    prior.scale[gvars] <- out[[1]]   
     p <- out[[2]]
-    theta <- out[[3]]
+    theta <- update.ptheta.group(group.vars=group.vars, p=p)
     
     Pf <- 1/(prior.scale + 1e-10)
-    f <- glmnet(x = x, y = y, family = family, weights = weights, offset = offset, alpha = 1, penalty.factor = Pf, 
-                lambda = sum(Pf)/(nrow(x) * ncol(x)), standardize = FALSE)
+    f <- glmnet(x = x, y = y, family = family, offset = offset, alpha = 1, 
+                penalty.factor = Pf, lambda = sum(Pf)/(nrow(x) * ncol(x)), standardize = FALSE)
     
     b <- as.numeric(f$beta) #/sqrt(dispersion)
     names(b) <- colnames(x)
@@ -120,7 +124,7 @@ bmlasso.fit <- function(x, y, family = "gaussian", weights = rep(1, nrow(x)), of
   names(f$coefficients) <- rownames(coef(f))
   f$linear.predictors <- predict(f, newx = x, type = "link", offset = offset)
   if (family == "gaussian")
-    f$dispersion <- bglm(y ~ f$linear.predictors - 1, weights = weights, start = 1, prior = "de", prior.mean = 1, prior.scale = 0, verbose = FALSE)$dispersion 
+    f$dispersion <- bglm(y ~ f$linear.predictors - 1, start = 1, prior = "de", prior.mean = 1, prior.scale = 0, verbose = FALSE)$dispersion 
   
   f$iter <- iter
   f$prior.scale <- prior.scale
@@ -128,11 +132,11 @@ bmlasso.fit <- function(x, y, family = "gaussian", weights = rep(1, nrow(x)), of
   f$group <- group
   f$group.vars <- group.vars 
   f$ungroup.vars <- ungroup.vars
-  f$p <- p[unlist(group.vars)]
+  f$p <- p
   f$ptheta <- theta
   f$init <- init
   f$aic <- deviance(f) + 2 * f$df
-  f$weights <- weights
+  f$offset <- offset
   
   return(f)
 }
