@@ -12,7 +12,7 @@
 }
 
 \usage{    
-  bmlasso(x, y, family = c("gaussian", "binomial", "poisson", "cox"), weights = rep(1, nrow(x)), offset = NULL, epsilon = 1e-04, maxit = 50, init = NULL, group = NULL, ss = c(0.04, 0.5),
+  bmlasso(x, y, family = c("gaussian", "binomial", "poisson", "cox"), offset = NULL, epsilon = 1e-04, maxit = 50, init = NULL, group = NULL, ss = c(0.04, 0.5),
           Warning = FALSE, verbose = FALSE) 
 }
 
@@ -20,7 +20,6 @@
 \arguments{
   \item{x}{ 
   input matrix, of dimension nobs x nvars; each row is an observation vector.
-  both x and y cannot include missing values.
   }
   \item{y}{
    response variable. Quantitative for family="gaussian", or family="poisson" (non-negative counts). 
@@ -30,6 +29,9 @@
   }
   \item{family}{
    Response type (see above).
+  }
+  \item{offset}{
+   A vector of length nobs that is included in the linear predictor.
   }
   \item{epsilon}{
    positive convergence tolerance e; the iterations converge when |dev - dev_{old}|/(|dev| + 0.1) < e.
@@ -124,7 +126,7 @@ f1 = glmNet(x, y, family = fam, ncv = 1)
 
 ps = f1$prior.scale; ps 
 ss = c(ps, 0.5)
-f2 = bmlasso(x, y, family = fam, prior = "mde", ss = ss, group = group)
+f2 = bmlasso(x, y, family = fam, ss = ss, group = group)
 
 par(mfrow = c(1, 2), mar = c(3, 4, 4, 4))
 gap = 10

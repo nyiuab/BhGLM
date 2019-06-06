@@ -13,7 +13,7 @@
 }
 
 \usage{    
-glmNet(x, y, family = c("gaussian", "binomial", "poisson", "cox"), weights = rep(1, nrow(x)), offset = NULL,
+glmNet(x, y, family = c("gaussian", "binomial", "poisson", "cox"), offset = NULL,
        alpha = c(1, 0.5, 0), lambda,
        penalty.factor = rep(1, ncol(x)), nfolds = 10, ncv = 10, 
        verbose = FALSE)
@@ -21,7 +21,7 @@ glmNet(x, y, family = c("gaussian", "binomial", "poisson", "cox"), weights = rep
 
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{x, y, family, weights, offset, alpha, lambda, penalty.factor, nfolds}{ 
+  \item{x, y, family, offset, alpha, lambda, penalty.factor, nfolds}{ 
   These arguments are the same as in the functions \code{\link{glmnet}} and \code{\link{cv.glmnet}} in the package \bold{glmnet}.
   }
   \item{ncv}{
