@@ -9,18 +9,17 @@ bmlasso <- function(x, y, family = c("gaussian", "binomial", "poisson", "cox"), 
   start.time <- Sys.time()
   call <- match.call()
   x <- as.matrix(x)
+  if (is.null(colnames(x))) colnames(x) <- paste("x", 1:ncol(x), sep = "")
   nobs <- nrow(x)
   if (NROW(y) != nobs) stop("nobs of 'x' and 'y' are different")
-  if (is.null(colnames(x))) colnames(x) <- paste("x", 1:ncol(x), sep = "")
-  if (any(is.na(x)) | any(is.na(y))) {
-    a <- apply(cbind(y,x), 1, function(z) !any(is.na(z)))
-    y <- y[a]
-    x <- x[a,]
-  }
-  if (!is.null(offset)){
+  inc <- apply(cbind(y, x), 1, function(z) !any(is.na(z)))
+  if (!is.null(offset)) {
     if (length(offset) != nobs) stop("nobs of 'x' and 'offset' are different")
-    offset <- offset[a]
+    inc <- apply(cbind(y, x, offset), 1, function(z) !any(is.na(z)))
   }
+  y <- y[inc]
+  x <- x[inc,]
+  offset <- offset[inc]
   family <- family[1]
   if (family == "cox")  
     if (!is.Surv(y)) stop("'y' should be a 'Surv' object")
@@ -31,8 +30,8 @@ bmlasso <- function(x, y, family = c("gaussian", "binomial", "poisson", "cox"), 
                    group = group, ss = ss, Warning = Warning)
   
   f$call <- call
-  class(f) <- c("glmnet", "bmlasso", "GLM")
-  if (family == "cox") class(f) <- c("glmnet", "bmlasso", "COXPH") 
+  if (family == "cox") class(f) <- c(class(f), "bmlasso", "COXPH") 
+  else class(f) <- c(class(f), "bmlasso", "GLM")
   stop.time <- Sys.time()
   minutes <- round(difftime(stop.time, start.time, units = "min"), 3)
   if (verbose){

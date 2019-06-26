@@ -19,10 +19,9 @@ measure.bh <- function(object, new.x, new.y, new.offset)
   if (any(class(object) %in% "glm")) 
   {
     if (!is.numeric(y)) stop("'new.y' must be numeric")
-    lp <- predict(object, newdata=new.x) 
-    mu <- object$family$linkinv(lp)
+    mu <- predict(object, newdata=new.x, type="response") 
     if (any(class(object) %in% "negbin")) object$dispersion <- object$theta
-    measures <- measure.glm(y, mu, family=object$family, dispersion=object$dispersion) 
+    measures <- measure.glm(y, mu, family=object$family$family, dispersion=object$dispersion) 
   }
   
   if (any(class(object) %in% "glmNet") | any(class(object) %in% "bmlasso"))
@@ -30,26 +29,19 @@ measure.bh <- function(object, new.x, new.y, new.offset)
     family <- object$family
     if (family=="cox")
       if (!is.Surv(y)) stop("'new.y' must be a Surv object")
-    if (missing(new.x)) lp <- object$linear.predictors 
-    else{
-      if (is.vector(new.x)) new.x <- t(as.matrix(new.x))
-      coefs <- object$coefficients
-      if (names(coefs)[1]=="(Intercept)") new.x <- cbind(1, new.x)
-      lp <- as.matrix(new.x) %*% coefs
-      if (!is.null(new.offset)) lp <- lp + new.offset
-    }
-    lp <- as.numeric(lp)
-    names(lp) <- 1:length(lp)
-    mu <- lp
-    if (family=="binomial") mu <- exp(lp)/(1 + exp(lp))
-    if (family=="poisson") mu <- exp(lp)
-    if (family=="cox")
+    if (is.null(object$offset)) object$offset <- FALSE
+    else object$offset <- TRUE
+    if (missing(new.x)) new.x <- object$x
+    newx <- as.matrix(new.x)
+    if (family=="cox"){
+      lp <- predict(object, newx=newx, newoffset=new.offset)
+      lp <- as.vector(lp)
       measures <- measure.cox(y, lp)
-    else {
-      if (family=="gaussian") fa <- gaussian()
-      if (family=="binomial") fa <- binomial()
-      if (family=="poisson") fa <- poisson()
-      measures <- measure.glm(y, mu, family=fa, dispersion=object$dispersion)
+    }
+    else{ 
+      mu <- predict(object, newx=newx, newoffset=new.offset, type="response")
+      mu <- as.vector(mu)
+      measures <- measure.glm(y, mu, family=family, dispersion=object$dispersion)
     }
   }
   
@@ -76,15 +68,11 @@ measure.glm <- function(y, y.fitted, family, dispersion = 1)
 {
   if (NROW(y)!=NROW(y.fitted))
     stop("y and y.fitted should be of the same length", call. = FALSE)
-  if (is.null(dispersion)) {
-    dispersion <- 1
-    warning("dispersion is not provided and set to 1", call. = FALSE)
-  }
+  if (is.null(dispersion)) dispersion <- 1
+  
   mu <- y.fitted
-  if (is.character(family)) family <- get(family, mode="function", envir=parent.frame())
-  if (is.function(family)) family <- family()
-  family <- family$family
-  if (substr(family, 1, 6)=="NegBin" | substr(family, 1, 17)=="Negative Binomial") 
+  if (substr(family, 1, 6)=="NegBin" | substr(family, 1, 17)=="Negative Binomial"
+      | family=="nb") 
     family <- "NegBin"
   fam <- c("gaussian", "binomial", "poisson", "quasibinomial", "quasipoisson", "NegBin")
   if (! family %in% fam)
@@ -112,7 +100,8 @@ measure.glm <- function(y, y.fitted, family, dispersion = 1)
   if (family=="binomial" | family=="quasibinomial") {
     if (!requireNamespace("pROC")) install.packages("pROC")
     require(pROC)
-    AUC <- as.numeric(auc(y, mu))
+    AUC <- suppressMessages( pROC::auc(y, mu) )
+    AUC <- as.numeric(AUC)
     misclassification <- mean(abs(y - mu) >= 0.5, na.rm = TRUE)
     measures <- list(deviance=deviance, auc=AUC, mse=mse, mae=mae, 
                      misclassification = misclassification)
@@ -133,7 +122,7 @@ measure.polr <- function(y, y.fitted)
   y.level <- levels(y)
   for (k in 1:NCOL(pred)) {
     y1 <- ifelse(y == y.level[k], 1, 0)
-    AUC <- AUC + as.numeric(auc(y1, pred[, k]))
+    AUC <- AUC + as.numeric( suppressMessages(pROC::auc(y1, pred[, k])) )
     misclassification <- misclassification + mean(abs(y1 - pred[, k]) > 0.5, na.rm = TRUE)
     mse <- mse + mean((y1 - pred[, k])^2, na.rm = TRUE)
   }

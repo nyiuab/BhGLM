@@ -83,7 +83,7 @@ cv.bh.glm <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
       lp[omit] <- predict(fit, newdata=data.obj[omit, , drop=FALSE])
       y.fitted[omit] <- object$family$linkinv(lp[omit])
       if (any(class(object) %in% "negbin")) fit$dispersion <- fit$theta
-      dd <- suppressWarnings( measure.glm(y.obj[omit], y.fitted[omit], family=object$family, dispersion=fit$dispersion) ) 
+      dd <- suppressWarnings( measure.glm(y.obj[omit], y.fitted[omit], family=object$family$family, dispersion=fit$dispersion) ) 
       deviance <- c(deviance, dd["deviance"])
       
       if (verbose) {
@@ -92,7 +92,7 @@ cv.bh.glm <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
       }
     }
     
-    measures <- measure.glm(y.obj, y.fitted, family=object$family) 
+    measures <- measure.glm(y.obj, y.fitted, family=object$family$family) 
     measures["deviance"] <- sum(deviance)
     
     measures0 <- rbind(measures0, measures)
@@ -169,15 +169,10 @@ cv.bh.coxph <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
 cv.bh.lasso <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
 { 
   family <- object$family
-  if (family=="gaussian") fa <- gaussian()
-  if (family=="binomial") fa <- binomial()
-  if (family=="poisson") fa <- poisson()
-  
   x.obj <- object$x
   y.obj <- object$y
   n <- NROW(y.obj)
   offset <- object$offset
-#  if (!offset) offset <- NULL
   init <- object$coefficients
   init <- init[!names(init)%in%"(Intercept)"]
   
@@ -203,16 +198,17 @@ cv.bh.lasso <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
       if (any(class(object) %in% "bmlasso"))
         fit <- update(object, x=x.obj[-omit, ], y=y.obj[-omit], offset=offset[-omit], 
                       init=init, verbose=FALSE)
+      if (is.null(fit$offset)) fit$offset <- FALSE
+      else fit$offset <- TRUE
+      xx <- x.obj[omit, , drop=FALSE]
+      off <- offset[omit]
+      lp[omit] <- as.vector(predict(fit, newx=xx, newoffset=off))
       if (any(class(object) %in% "GLM")) {
-        lp[omit] <- cbind(1, x.obj[omit, , drop=FALSE]) %*% fit$coefficients
-        if (!is.null(offset)) lp[omit] <- lp[omit] + offset[omit]
-        y.fitted[omit] <- fa$linkinv(lp[omit])
-        dd <- suppressWarnings( measure.glm(y.obj[omit], y.fitted[omit], family=fa, dispersion=fit$dispersion) )
+        y.fitted[omit] <- as.vector(predict(fit, newx=xx, type="response", newoffset=off))
+        dd <- suppressWarnings( measure.glm(y.obj[omit], y.fitted[omit], family=family, dispersion=fit$dispersion) )
         deviance <- c(deviance, dd["deviance"])
       }
-      if (any(class(object) %in% "COXPH")) 
-        lp[omit] <- x.obj[omit, , drop=FALSE] %*% fit$coefficients 
-         
+       
       if (verbose) {
         j <- j + 1
         cat(j, "")
@@ -220,7 +216,7 @@ cv.bh.lasso <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
     }
     
     if (any(class(object) %in% "GLM")) {
-      measures <- measure.glm(y.obj, y.fitted, family=fa)
+      measures <- measure.glm(y.obj, y.fitted, family=family)
       measures["deviance"] <- sum(deviance)
       y.fitted0 <- cbind(y.fitted0, y.fitted)
     }
@@ -315,7 +311,7 @@ cv.gam.glm <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
   measures0 <- lp0 <- y.fitted0 <- NULL
   j <- 0
   
-  fam <- object$family
+  fam <- object$family$family
   if (substr(object$family$family, 1, 17) == "Negative Binomial")
     fam <- "NegBin"
   
