@@ -18,7 +18,6 @@ measure.bh <- function(object, new.x, new.y, new.offset)
   
   if (any(class(object) %in% "glm")) 
   {
-    if (!is.numeric(y)) stop("'new.y' must be numeric")
     mu <- predict(object, newdata=new.x, type="response") 
     if (any(class(object) %in% "negbin")) object$dispersion <- object$theta
     measures <- measure.glm(y, mu, family=object$family$family, dispersion=object$dispersion) 
@@ -80,8 +79,12 @@ measure.glm <- function(y, y.fitted, family, dispersion = 1)
   
   if (family=="gaussian") 
     logL <- dnorm(y, mean=mu, sd=sqrt(dispersion), log=TRUE)
-  if (family=="binomial" | family=="quasibinomial") 
-    logL <- dbinom(y, size=1, prob=mu, log=TRUE)
+  if (family=="binomial" | family=="quasibinomial"){ 
+    if (is.factor(y)) y <- as.numeric(y) - 1
+    L <- dbinom(y, size=1, prob=mu, log=FALSE)
+    L <- ifelse(L==0, 1e-04, L)
+    logL <- log(L)
+  }
   if (family=="poisson" | family=="quasipoisson") 
     logL <- dpois(y, lambda=mu, log=TRUE)
   if (family == "NegBin")
