@@ -50,6 +50,7 @@ generate.foldid <- function(nobs, nfolds=10, foldid=NULL, ncv=1)
    for(j in 1:ncv) 
      foldid[, j] <- sample(rep(seq(nfolds), length=nobs))
   }
+  foldid <- as.matrix(foldid)
   nfolds <- max(foldid)
   ncv <- ncol(foldid)
   
