@@ -62,11 +62,11 @@ into the standard Newton-Raphson procedure as implemented in the function \code{
  
   Gelman, A., Jakulin, A., Pittau, M. G. and Su, Y. S. (2008). A weakly informative default prior distribution for logistic and other regression models. Annals of Applied Statistics 2, 1360-1383.
 
-  Armagan, A., Dunson, D. and Lee, J. (2010) Bayesian generalized double Pareto shrinkage. Biometrika
-  
-  Gelman, A. et al. (2014) Bayesian Data Analysis. Chapman & Hall/CRC Press, New York. 
-
   Rockova, V. and George, E. I. (2014) EMVS: The EM Approach to Bayesian Variable Selection. JASA 109: 828-846.
+  
+  Zaixiang Tang, Yueping Shen, Xinyan Zhang, Nengjun Yi (2017) The Spike-and-Slab Lasso Cox Models for Survival Prediction and Associated Genes Detection. Bioinformatics, 33(18), 2799-2807.
+  
+  Zaixiang Tang, Yueping Shen, Shu-Feng Lei, Xinyan Zhang, Zixuan Yi, Boyi Guo, Jake Chen, and Nengjun Yi (2019) Gsslasso Cox: a fast and efficient pathway-based framework for predicting survival and detecting associated genes. BMC Bioinformatics 20(94).
 }
 
 \author{

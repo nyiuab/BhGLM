@@ -49,7 +49,7 @@
   If \code{group} is a numberic vector, it defines groups as follows: Group 1: \code{(group[1]+1):group[2]}, Group 2: \code{(group[2]+1):group[3]}, Group 3: \code{(group[3]+1):group[4]}, .....  
   If \code{group} is a list of variable names, \code{group[[k]]} includes variables in the k-th group. 
   The mixture double-exponential prior is only used for grouped predictors. 
-  For ungrouped predictors, the prior is double-exponential or t. 
+  For ungrouped predictors, the prior is double-exponential with scale \code{ss[2]} and mean 0. 
 }
   \item{ss}{
    a vector of two positive scale values for the spike-and-slab mixture double-exponential prior, allowing for different scales for different predictors, 
@@ -86,7 +86,9 @@ The mixture prior allows different shrinkage (penalty) values for different pred
   
   Zaixiang Tang, Yueping Shen, Xinyan Zhang, Nengjun Yi (2017) The Spike-and-Slab Lasso Cox Models for Survival Prediction and Associated Genes Detection. Bioinformatics, 33(18), 2799-2807.
   
-  Zaixiang Tang, et al. (2017) Spike-and-Slab Lasso Generalized Linear Models for Disease Prediction and Associated Genes Detection by Incorporating Pathway Information. Bioinformatics.
+  Zaixiang Tang, Yueping Shen, Yan Li, Xinyan Zhang, Jia Wen, Chen'ao Qian, Wenzhuo Zhuang, Xinghua Shi, and Nengjun Yi (2018) Group Spike-and-Slab Lasso Generalized Linear Models for Disease Prediction and Associated Genes Detection by Incorporating Pathway Information. Bioinformatics 34(6): 901-910.
+  
+  Zaixiang Tang, Yueping Shen, Shu-Feng Lei, Xinyan Zhang, Zixuan Yi, Boyi Guo, Jake Chen, and Nengjun Yi (2019) Gsslasso Cox: a fast and efficient pathway-based framework for predicting survival and detecting associated genes. BMC Bioinformatics 20(94). 
 }
 
 \author{

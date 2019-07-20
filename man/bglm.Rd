@@ -61,7 +61,7 @@ bglm(formula, family = gaussian, data, offset, weights, subset, na.action,
   scale parameters in the priors \code{de} and \code{t}. \code{prior.scale = c(a1,a2,...,ak)}; if \code{k < J} (\code{J} is the total number of predictors , not counting the intercept),
   it is internally expanded to \code{c(a1,a2,...,ak, rep(ak,J-k))}. 
   For both \code{t} and \code{de} prior, smaller scale induces stronger shrinkage
-  (weak shrinkage: \code{prior.scale > 1}, strong shrinkage: \code{prior.scale < 0.3}).  
+  (weak shrinkage: \code{prior.scale > 1}, strong shrinkage: \code{prior.scale < 0.3}). 
 }
   \item{prior.df}{
   prior degrees of freedom in the \code{t} and \code{mt} priors: default is \code{1} (leading to Cauchy prior).  
@@ -88,20 +88,20 @@ bglm(formula, family = gaussian, data, offset, weights, subset, na.action,
   This function sets up Bayesian hierarchical generalized linear models and fits the model using the EM-IWLS algorithm. 
 It is an alteration of the standard function \code{\link{glm}} for fitting classical GLMs, and includes all the \code{\link{glm}} arguments and also some new arguments for the hierarchical modeling. 
   
-  Several types of prior distributions on the coefficients can be used:  
-for t, \code{coefficients ~ t(prior.df, prior.mean, prior.sd^2)};
+  Three types of prior distributions on the coefficients can be used:  
+for t, \code{coefficients ~ t(prior.df, prior.mean, prior.scale^2)};
 for de, \code{coefficients ~ DE(prior.mean, prior.scale)};
 for mde, \code{coefficients ~ DE(prior.mean, (1-d)*ss[1]+d*ss[2]), d ~ Bin(1; theta)};
 
-These priors are expressed hierarchically. Therefore, EM algorithms can be used to fit the models.
-
-  These prior distributions include various priors as special cases, for example,
+  For t and de, \code{prior.scale} is modified internally: for a predictor with only one value nothing is changed; for a predictor x with exactly two unique values, we divide the user-specified scale \code{prior.scale} by the range of x; for a predictor x with more than two unique values, we divide the user-specified scale by sd(x). For gaussian models, \code{prior.scale} is further multiplied by sd(y).  
+  
+  The t and de prior distributions include various priors as special cases, for example,
 1) If \code{prior.scale = Inf}, the t and double-exponential become Uniform, leading to classical GLMs; 
 2) If \code{prior.df = Inf}, the t is Normal \code{N(prior.mean, prior.scale^2)}, leading to ridge regression; 
 3) If \code{prior.df = 1}, the t is Cauchy; 
 4) If \code{prior.scale = prior.df = 0}, the t is Jeffrey prior.
    
-  The EM-IWLS algorithm estimates posterior modes of the parameters, and incorporates an EM algorithm into the iterative weighted least squares (IWLS) as implemented in the function \code{\link{glm}}. 
+  These priors are expressed hierarchically. Therefore, EM algorithms can be used to fit the models. The EM-IWLS algorithm estimates posterior modes of the parameters, and incorporates an EM algorithm into the iterative weighted least squares (IWLS) as implemented in the function \code{\link{glm}}. 
 The algorithm treats the variances \code{prior.sd^2} and the indicator variables (for the mixture prior \code{mde}) as missing data.
 
   The computational cost of the algorithm is mainly in the step of jointly updating coefficients, because this step needs to calculate the inverse of a large matrix. 
@@ -130,6 +130,8 @@ In genetic studies, we can use biological pathways to construct groups. The argu
  Rockova, V. and George, E. I. (2014) EMVS: The EM Approach to Bayesian Variable Selection. JASA 109: 828-846.
 
  Zaixiang Tang, Yueping Shen, Xinyan Zhang, Nengjun Yi (2017) The Spike-and-Slab Lasso Generalized Linear Models for Prediction and Associated Genes Detection. Genetics 205, 77–88.
+ 
+ Zaixiang Tang, Yueping Shen, Yan Li, Xinyan Zhang, Jia Wen, Chen'ao Qian, Wenzhuo Zhuang, Xinghua Shi, and Nengjun Yi (2018) Group Spike-and-Slab Lasso Generalized Linear Models for Disease Prediction and Associated Genes Detection by Incorporating Pathway Information. Bioinformatics 34(6): 901-910. 
 }
 
 \author{
