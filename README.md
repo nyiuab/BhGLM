@@ -8,10 +8,8 @@ Author: Nengjun Yi <nyi@uab.edu>;  Maintainer: Nengjun Yi <nyi@uab.edu>
 
 # Installation
 
-if (!require(remotes)) {
-  install.packages("remotes")
-  library(remotes)
-}
+library(remotes)
+
 install_github("nyiuab/BhGLM", force=T, build_vignettes=T)
 
 
