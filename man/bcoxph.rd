@@ -19,8 +19,7 @@
 bcoxph(formula, data, weights, subset, na.action, init, 
        control = coxph.control(eps = 1e-04, iter.max = 50), 
        ties = c("breslow", "efron"), tt,  
-       prior = c("t", "de", "mde"), group = NULL, method.coef, 
-       prior.sd = 1, prior.scale = 0.5, prior.df = 1, prior.mean = 0, ss = c(0.04, 0.5), 
+       prior = Student(0, 0.5, 1), group = NULL, method.coef, 
        Warning = FALSE, verbose = FALSE, ...)
 }
 
@@ -29,8 +28,7 @@ bcoxph(formula, data, weights, subset, na.action, init,
   \item{formula, data, weights, subset, na.action, init, control, ties, tt}{ 
   These arguments are the same as in the function \code{\link{coxph}} in the package \bold{survival}.
 }
-  \item{prior, group, method.coef, prior.sd, prior.scale, prior.df, prior.mean, ss,  
-        Warning, verbose}{ 
+  \item{prior, group, method.coef, Warning, verbose}{ 
   These arguments are the same as in the function \code{\link{bglm}}.
 }
 \item{\dots}{
@@ -100,23 +98,22 @@ par(mfrow = c(2, 2), cex.axis = 1, mar = c(3, 4, 4, 4))
 gap = 10
 
 ps = 0.05
-f1 = bcoxph(y ~ ., data = x, prior = "de", prior.scale = ps)
+f1 = bcoxph(y ~ ., data = x, prior = De(0, ps))
 # summary.bh(f1)
 plot.bh(f1, threshold = 0.01, gap = gap, main = "Cox with double-exponential")
 
-f2 = bcoxph(y ~ ., data = x, prior = "t", prior.scale = ps/1.4)
+f2 = bcoxph(y ~ ., data = x, prior = Student(0, ps/1.4))
 # summary.bh(f2)
 plot.bh(f2, threshold = 0.01, gap = gap, main = "Cox with t")
 
 ss = c(0.04, 0.5) 
-f3 = bcoxph(y ~ ., data = x, prior = "mde", ss = ss)
+f3 = bcoxph(y ~ ., data = x, prior = mde(0, ss[1], ss[2]))
 # summary.bh(f3)
 plot.bh(f3, threshold = 0.01, gap = gap, main = "Cox with mixture double exponential") 
 
-
 # group-wise update
 ps = 0.05
-f1 = bcoxph(y ~ ., data = x, prior = "de", method.coef = 50, prior.scale = ps)
+f1 = bcoxph(y ~ ., data = x, prior = De(0, ps), method.coef = 50)
 #summary.bh(f1)
 plot.bh(coefs = f2$coefficients, threshold = 10, gap = gap)  
 

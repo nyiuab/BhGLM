@@ -9,7 +9,7 @@
 
 \description{
   This function is to set up Bayesian hierarchical GLMs, and to fit the model using the EM-IWLS algorithm. 
-  Three types of priors on each coefficient can be used: Student-t (t), double-exponential (de), and spike-and-slab mixture double-exponential (mde).  
+  Three types of priors on each coefficient can be used: Student-t, double-exponential, and spike-and-slab mixture double-exponential.  
   The Bayesian hierarchical GLMs include various models as special cases, e.g., classical GLMs, ridge regression, and Bayesian lasso. 
   It can be used for analyzing general data and large-scale and highly-correlated variables 
   (for example, detecting disease-associated factors and predicting phenotypes).
@@ -18,8 +18,7 @@
 \usage{    
 bglm(formula, family = gaussian, data, offset, weights, subset, na.action, 
     start = NULL, etastart, mustart, control = glm.control(epsilon = 1e-04, maxit = 50), 
-    prior = c("t", "de", "mde"), group = NULL, method.coef,
-    dispersion = 1, prior.sd = 0.5, prior.scale = 0.5, prior.df = 1, prior.mean = 0, ss = c(0.04, 0.5), 
+    prior = Student(0, 0.5, 1), group = NULL, method.coef,
     Warning = FALSE, verbose = FALSE, ...)  
 }
 
@@ -33,9 +32,8 @@ bglm(formula, family = gaussian, data, offset, weights, subset, na.action,
   also can be Negative Binomial (\code{NegBin or "NegBin"}).
 }
   \item{prior}{
-  Several types of priors for the coefficents; double-exponetial (\code{"de"}), Student-t (\code{"t"}), and spike-and-slab mixture double-exponential (\code{"mde"}). 
-  The mixture priors are only used for grouped predictors (defined by \code{group}). 
-  For ungrouped predictors, the priors are double-exponential or t with scale = prior.scale.  
+  Prior distribustions for the coefficents. Three types of priors can be used; Student-t: \code{Student(mean, scale, df)}, Double-exponetial: \code{De(mean, scale)}, and mixture double-exponential: \code{mde(mean, s0, s1)}.
+  \code{mean}, \code{scale} and \code{df} can be a vector. For example, scale = c(a1,a2,...,ak); if k < the total number of predictors, it is internally expanded to c(a1,a2,...,ak, rep(ak,J-k)).
 }
 \item{group}{
   a numeric vector, or an integer, or a list indicating the groups of predictors. 
@@ -51,28 +49,6 @@ bglm(formula, family = gaussian, data, offset, weights, subset, na.action,
   \code{method.coef} can be a numeric vector or a list of variable names (as defined by \code{group}) that defines groups.
   If the number of coefficients is large, the group-by-group updating method can be much faster than the jointly updating.
 }
-  \item{dispersion}{
-  dispersion parameter. If a value is provided, it is the starting value of \code{dispersion}. For Poisson and Binomial models, \code{dispersion} equals 1.
-}
-  \item{prior.sd}{
-  prior standard deviations in the normal priors of the coefficients. If provided, they are starting values of the prior standard deviations for the iterative algorithms. 
-}
-  \item{prior.scale}{
-  scale parameters in the priors \code{de} and \code{t}. \code{prior.scale = c(a1,a2,...,ak)}; if \code{k < J} (\code{J} is the total number of predictors , not counting the intercept),
-  it is internally expanded to \code{c(a1,a2,...,ak, rep(ak,J-k))}. 
-  For both \code{t} and \code{de} prior, smaller scale induces stronger shrinkage
-  (weak shrinkage: \code{prior.scale > 1}, strong shrinkage: \code{prior.scale < 0.3}). 
-}
-  \item{prior.df}{
-  prior degrees of freedom in the \code{t} and \code{mt} priors: default is \code{1} (leading to Cauchy prior).  
-}
-  \item{prior.mean}{
-  prior mean for each coefficient.
-}
-  \item{ss}{
-   a vector of two positive scale values for the mixture prior \code{mde}, allowing for different scales for different predictors, 
-   leading to different amount of shrinkage. smaller scale values give stronger shrinkage.
-}
   \item{Warning}{
   logical. If \code{TRUE}, show the error messages of not convergence and identifiability.
 }
@@ -85,33 +61,13 @@ bglm(formula, family = gaussian, data, offset, weights, subset, na.action,
 }
 
 \details{
-  This function sets up Bayesian hierarchical generalized linear models and fits the model using the EM-IWLS algorithm. 
-It is an alteration of the standard function \code{\link{glm}} for fitting classical GLMs, and includes all the \code{\link{glm}} arguments and also some new arguments for the hierarchical modeling. 
-  
-  Three types of prior distributions on the coefficients can be used:  
-for t, \code{coefficients ~ t(prior.df, prior.mean, prior.scale^2)};
-for de, \code{coefficients ~ DE(prior.mean, prior.scale)};
-for mde, \code{coefficients ~ DE(prior.mean, (1-d)*ss[1]+d*ss[2]), d ~ Bin(1; theta)};
+  This function sets up Bayesian hierarchical generalized linear models and fits the model using the EM-IWLS algorithm. It is an alteration of the standard function \code{\link{glm}} for fitting classical GLMs, and includes all the \code{\link{glm}} arguments and also some new arguments for the hierarchical modeling. 
 
-  For t and de, \code{prior.scale} is modified internally: for a predictor with only one value nothing is changed; for a predictor x with exactly two unique values, we divide the user-specified scale \code{prior.scale} by the range of x; for a predictor x with more than two unique values, we divide the user-specified scale by sd(x). For gaussian models, \code{prior.scale} is further multiplied by sd(y).  
-  
-  The t and de prior distributions include various priors as special cases, for example,
-1) If \code{prior.scale = Inf}, the t and double-exponential become Uniform, leading to classical GLMs; 
-2) If \code{prior.df = Inf}, the t is Normal \code{N(prior.mean, prior.scale^2)}, leading to ridge regression; 
-3) If \code{prior.df = 1}, the t is Cauchy; 
-4) If \code{prior.scale = prior.df = 0}, the t is Jeffrey prior.
+  For \code{Student(mean, scale)} and \code{De(mean, scale)}, \code{scale} is modified internally: for a predictor with only one value nothing is changed; for a predictor x with exactly two unique values, we divide the user-specified scale \code{scale} by the range of x; for a predictor x with more than two unique values, we divide the user-specified scale by sd(x). For gaussian models, \code{scale} is further multiplied by sd(y).  
    
-  These priors are expressed hierarchically. Therefore, EM algorithms can be used to fit the models. The EM-IWLS algorithm estimates posterior modes of the parameters, and incorporates an EM algorithm into the iterative weighted least squares (IWLS) as implemented in the function \code{\link{glm}}. 
-The algorithm treats the variances \code{prior.sd^2} and the indicator variables (for the mixture prior \code{mde}) as missing data.
+  These priors are expressed hierarchically. Therefore, EM algorithms can be used to fit the models. The EM-IWLS algorithm estimates posterior modes of the parameters, and incorporates an EM algorithm into the iterative weighted least squares (IWLS) as implemented in the function \code{\link{glm}}. The computational cost of the algorithm is mainly in the step of jointly updating coefficients. This function implements two methods to update the coefficients, i.e.,  jointly updating all coefficients, or updating a group of coefficients at a time and proceeding by cycling through all the groups at each iteration. If the number of coefficients is large (say > 1000), the group-by-group method can be much faster.   
 
-  The computational cost of the algorithm is mainly in the step of jointly updating coefficients, because this step needs to calculate the inverse of a large matrix. 
-This function implements two methods to update the coefficients, i.e.,  jointly updating all coefficients, or updating a group of coefficients at a time and proceeding by cycling through all the groups at each iteration. 
-If the number of coefficients is large (say > 1000), the group-by-group method can be much faster.   
-
-  The models can include both ungrouped and grouped variables. Genetic and other scientific studies routinely generate very many predictor variables, which can be naturally grouped, with predictors in a group being biologically related or statistically correlated. 
-In genetic studies, we can use biological pathways to construct groups. The argument \code{group} defines the groups. 
-
-  For genetic association analysis, first run \code{\link{make.main}} to construct design matrix of main effects from genotypic data of genetic markers and/or \code{\link{make.inter}} to make interactions.
+  The models can include both ungrouped and grouped variables. Genetic and other scientific studies routinely generate very many predictor variables, which can be naturally grouped, with predictors in a group being biologically related or statistically correlated. In genetic studies, we can use biological pathways to construct groups. The argument \code{group} defines the groups. 
 }
 
 \value{
@@ -163,19 +119,19 @@ par(mfrow = c(2, 2), cex.axis = 1, mar = c(3, 4, 4, 4))
 gap = 10
 
 ps = 0.05
-f1 = bglm(y ~ ., data = x, family = fam, prior = "de", prior.scale = ps)   
+f1 = bglm(y ~ ., data = x, family = fam, prior = De(0, ps))   
 plot.bh(f1, vars.rm = 1, threshold = 0.01, gap = gap, main = "de")  
 
-f2 = bglm(y ~ ., data = x, family = fam, prior = "t", prior.scale = ps/1.4)   
+f2 = bglm(y ~ ., data = x, family = fam, prior = Student(0, ps/1.4))   
 plot.bh(f2, vars.rm = 1, threshold = 0.01, gap = gap, main = "t")  
 
 ss = c(0.04, 0.5) 
-f3 = bglm(y ~ ., data = x, family = fam, prior = "mde", ss = ss)   
+f3 = bglm(y ~ ., data = x, family = fam, prior = mde(0, ss[1], ss[2]))   
 plot.bh(f3, vars.rm = 1, threshold = 0.01, gap = gap, main = "mde")  
 
 # group-wise update (can be much faster if m is large)
 ps = 0.05
-f1 = bglm(y ~ ., data = x, family = fam, prior = "de", method.coef = 50, prior.scale = ps) # update 50 coefficients at a time
+f1 = bglm(y ~ ., data = x, family = fam, prior = De(0, ps), method.coef = 50) # update 50 coefficients at a time
 plot.bh(f1, vars.rm = 1, threshold = 0.01, gap = gap)  
 
 }

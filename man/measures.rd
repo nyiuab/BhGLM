@@ -125,8 +125,8 @@ y = yy$y.ordinal; fam = binomial
 x1 = x[1:(N/2),]; y1 = y[1:(N/2)]
 x2 = x[(N/2):N,]; y2 = y[(N/2):N]
 
-f1 = bglm(y1 ~ ., data=x1, family=fam, prior="de", prior.scale=0.5)   
-plot.bh(f1, vars.rm = 1, threshold = 0.01, gap = 10)  
+f1 = bglm(y1 ~ ., data=x1, family=fam, prior=De(0,0.5))   
+plot.bh(f1, vars.rm=1, threshold=0.01, gap=10)  
 
 measure.bh(f1, x2, y2)
 
@@ -134,8 +134,8 @@ measure.bh(f1, x2, y2)
 y = yy$y.surv
 y1 = y[1:(N/2)]
 y2 = y[(N/2):N]
-f1 = bcoxph(y1 ~ ., data=x1, prior="de", prior.scale=0.5)   
-plot.bh(f1, threshold = 0.01, gap = 10)  
+f1 = bcoxph(y1 ~ ., data=x1, prior=De(0,0.5))   
+plot.bh(f1, threshold=0.01, gap=10)  
 
 measure.bh(f1, x2, y2)
  

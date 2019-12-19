@@ -106,7 +106,7 @@ f = glmNet(x, y, family = fam, alpha = 1, ncv = 2)
 cv = cv.bh(f, ncv = 2)
 cv$measures 
 
-f1 = bglm(y ~ ., data = x, family = fam, prior = "de", prior.scale = f$prior.scale)
+f1 = bglm(y ~ ., data = x, family = fam, prior = De(scale=f$prior.scale))
 cv1 = cv.bh(f1, foldid = cv$foldid)
 cv1$measures
 
@@ -122,7 +122,7 @@ f = glmNet(x, y, family = "cox", alpha = 1, ncv = 2)
 cv = cv.bh(f, ncv = 2)
 cv$measures 
 
-f1 = bcoxph(y ~ ., data = x, prior = "de", prior.scale = f$prior.scale)
+f1 = bcoxph(y ~ ., data = x, prior = De(scale=f$prior.scale))
 cv1 = cv.bh(f1, foldid = cv$foldid)
 cv1$measures
 

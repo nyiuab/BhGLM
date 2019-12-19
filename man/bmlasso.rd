@@ -12,7 +12,7 @@
 }
 
 \usage{    
-  bmlasso(x, y, family = c("gaussian", "binomial", "poisson", "cox"), offset = NULL, epsilon = 1e-04, maxit = 50, init = NULL, group = NULL, ss = c(0.04, 0.5),
+bmlasso(x, y, family = c("gaussian", "binomial", "poisson", "cox"), offset = NULL, epsilon = 1e-04, maxit = 50, init = NULL, group = NULL, ss = c(0.04, 0.5),
           Warning = FALSE, verbose = FALSE) 
 }
 

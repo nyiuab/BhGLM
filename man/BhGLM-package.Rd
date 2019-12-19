@@ -20,7 +20,7 @@
   Package: \tab BhGLM\cr
   Type: \tab Package\cr
   Version: \tab 1.1.0\cr
-  Date: \tab 2019-04-28\cr
+  Date: \tab 2019-12-10\cr
   License: \tab MIT\cr
   LazyLoad: \tab yes\cr
   }

@@ -17,8 +17,7 @@
 \usage{
 bpolr(formula, data, weights, start, subset, na.action, 
       method = c("logistic", "probit", "loglog", "cloglog", "cauchit"), 
-      contrasts = NULL, Hess = TRUE, 
-      prior.mean = 0, prior.scale = 0.5, prior.df = 1, 
+      contrasts = NULL, Hess = TRUE, prior = Student(0, 0.5, 1), 
       verbose = FALSE, ...) 
 }
 
@@ -30,8 +29,8 @@ bpolr(formula, data, weights, start, subset, na.action,
   \item{start}{
   Initial values for the coefficients (not for zeta).
 }
-  \item{prior.mean, prior.scale, prior.df, verbose }{
-  These arguments are the same as in \code{\link{bglm}}.
+  \item{prior}{
+  Prior for the coefficents. only Student-t, \code{Student(mean, scale, df)}, can be used. \code{mean}, \code{scale} and \code{df} can be a vector. For example, scale = c(a1,a2,...,ak); if k < the total number of predictors, it is internally expanded to c(a1,a2,...,ak, rep(ak,J-k)).
 }
 \item{\dots}{
   further arguments for \code{\link[MASS]{polr}}.
@@ -79,12 +78,12 @@ plot.bh(f1, gap = 5)
 summary.bh(f1)
 
 # equivalent to classical ordered logistic regression
-f2 = bpolr(y ~ ., data = x, prior.scale = Inf)
+f2 = bpolr(y ~ ., data = x, prior=Student(scale=Inf))
 plot.bh(f2, gap = 5)
 summary.bh(f2)
 
 # hierarchical ordered logistic regression
-f3 = bpolr(y ~ ., data = x, prior.scale = 0.05)
+f3 = bpolr(y ~ ., data = x, prior=Student(scale=0.05))
 plot.bh(f3, gap = 5)
 summary.bh(f3)
 
