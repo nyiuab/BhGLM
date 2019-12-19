@@ -36,6 +36,10 @@ export(surv.curves)
 export(aucCox)
 export(peCox)
 
+export(Student)
+export(De)
+export(mde)
+
 #************************************
 
 
