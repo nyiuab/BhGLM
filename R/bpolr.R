@@ -1,13 +1,16 @@
 
 bpolr <- function (formula, data, weights, start, subset, na.action, 
                    method = c("logistic", "probit", "loglog", "cloglog", "cauchit"), 
-                   contrasts = NULL, Hess = TRUE, 
-                   prior.mean = 0, prior.scale = 0.5, prior.df = 1, 
+                   contrasts = NULL, Hess = TRUE, prior = Student(0, 0.5, 1),  
                    verbose = FALSE, ...) 
 {
   if (!requireNamespace("MASS")) install.packages("MASS")
     library(MASS)
     start.time <- Sys.time()
+    
+    prior.mean <- prior$mean
+    prior.scale <- prior$scale
+    prior.df <- prior$df
     
     model <- TRUE 
     logit <- function(p) log(p/(1 - p))
@@ -171,10 +174,8 @@ bpolr <- function (formula, data, weights, start, subset, na.action,
     fit$na.action <- attr(m, "na.action")
     fit$contrasts <- cons
     fit$xlevels <- .getXlevels(Terms, m)
-    fit$prior.mean <- prior.mean
-    fit$prior.scale <- prior.scale
-    fit$prior.df <- prior.df
     fit$method <- method
+    fit$prior <- list(prior="Stendent-t", mean=prior.mean, scale=prior.scale, df=prior.df)
     
     class(fit) <- c("polr")
     stop.time <- Sys.time()

@@ -107,7 +107,7 @@ measure.glm <- function(y, y.fitted, family, dispersion = 1)
     AUC <- as.numeric(AUC)
     misclassification <- mean(abs(y - mu) >= 0.5, na.rm = TRUE)
     measures <- list(deviance=deviance, auc=AUC, mse=mse, mae=mae, 
-                     misclassification = misclassification)
+                     misclassification=misclassification)
   }
   
   round(unlist(measures), digits=3)
@@ -149,7 +149,7 @@ measure.cox <- function(y, lp)
 {
   if (NROW(y)!=NROW(lp))
     stop("y and lp should be of the same length", call. = FALSE)
-  ff <- bcoxph(y ~ lp, prior.scale=0, prior.mean=1, verbose=FALSE)
+  ff <- bcoxph(y ~ lp, prior=De(1, 0), verbose=FALSE)
   deviance <- -2 * ff$loglik[2]
   cindex <- summary(ff)$concordance[[1]]
   measures <- list(deviance = deviance, Cindex = cindex)
@@ -221,8 +221,8 @@ peCox <- function (y, lp, FUN=c("Brier", "KL"), main="", lwd=2, lty=1, col="blac
   nt <- length(tt)
   
   x <- lp[ord]
-  cox1 <- bcoxph(Surv(time, status) ~ x, init = 1, prior = "de",
-                 prior.mean = 1, prior.scale = 0, verbose = FALSE)
+  cox1 <- bcoxph(Surv(time, status) ~ x, init = 1, prior = De(1,0),
+                 verbose = FALSE)
   if (sum(x^2) == 0) 
     sf <- survfit(cox1, newdata = data.frame(x = x), type = "kalbfl")
   else sf <- survfit(cox1, newdata = data.frame(x = x))

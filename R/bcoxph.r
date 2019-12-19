@@ -1,14 +1,21 @@
 
 bcoxph <- function (formula, data, weights, subset, na.action, init, 
                     control = coxph.control(eps = 1e-04, iter.max = 50), ties = c("breslow", "efron"), tt,  
-                    prior = c("t", "de", "mde"), group = NULL, method.coef, 
-                    prior.sd = 0.5, prior.scale = 0.5, prior.df = 1, prior.mean = 0, ss = c(0.04, 0.5), 
+                    prior = Student(0, 0.5, 1), group = NULL, method.coef, 
                     Warning = FALSE, verbose = FALSE, ...) 
 {
   if (!requireNamespace("survival")) install.packages("survival")
     require(survival)
     start.time <- Sys.time()
-    prior <- prior[1]
+    prior.mean <- prior$mean
+    prior.scale <- prior$scale
+    if (is.null(prior.scale)) prior.scale <- 0.5
+    prior.df <- prior$df
+    if (is.null(prior.df)) prior.df <- 1
+    ss <- prior$ss
+    if (is.null(ss)) ss <- c(0.04, 0.5)
+    prior <- prior[[1]]
+    prior.sd <- 0.5 
     if (missing(method.coef)) method.coef <- NULL 
     
     robust <- FALSE
@@ -394,19 +401,20 @@ bcoxph.fit <- function(x, y, offset = rep(0, nobs), weights = rep(1, nobs), init
   fit$iter[1] <- fit$iter[2] <- iter
   fit$loglik[1] <- loglik0
   fit$deviance <- dev
-  fit$prior <- prior
-  fit$prior.mean <- prior.mean 
   fit$prior.sd <- prior.sd 
-  fit$prior.scale <- prior.scale
-  if (prior == "t") fit$prior.df <- prior.df
   fit$group <- group
   fit$group.vars <- group.vars
   fit$ungroup.vars <- ungroup.vars
   fit$method.coef <- method.coef
+  
+  if (prior == "t") 
+    fit$prior <- list(prior="Stendent-t", mean=prior.mean, scale=prior.scale, df=prior.df)
+  if (prior == "de") 
+    fit$prior <- list(prior="Double-exponential", mean=prior.mean, scale=prior.scale)
   if (prior == "mde") {
     fit$p <- p
     fit$ptheta <- theta
-    fit$ss <- ss
+    fit$prior <- list(prior="mixture double-exponential", mean=prior.mean, s0=ss[1], s1=ss[2])
   }
   
   fit

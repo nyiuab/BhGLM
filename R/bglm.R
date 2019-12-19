@@ -3,12 +3,21 @@
 
 bglm <- function (formula, family = gaussian, data, offset, weights, subset, na.action, 
            start = NULL, etastart, mustart, control = glm.control(epsilon = 1e-04, maxit = 50), 
-           prior = c("t", "de", "mde"), group = NULL, method.coef,
-           dispersion = 1, prior.sd = 0.5, prior.scale = 0.5, prior.df = 1, prior.mean = 0, ss = c(0.04, 0.5), 
+           prior = Student(0, 0.5, 1), group = NULL, method.coef, 
            Warning = FALSE, verbose = FALSE, ...)  
 {
   start.time <- Sys.time()
-  prior <- prior[1]
+  
+  prior.mean <- prior$mean
+  prior.scale <- prior$scale
+  if (is.null(prior.scale)) prior.scale <- 0.5
+  prior.df <- prior$df
+  if (is.null(prior.df)) prior.df <- 1
+  ss <- prior$ss
+  if (is.null(ss)) ss <- c(0.04, 0.5)
+  prior <- prior[[1]]
+  dispersion <- 1 
+  prior.sd <- 0.5 
   if (missing(method.coef)) method.coef <- NULL 
   
   contrasts <- NULL
@@ -68,7 +77,7 @@ bglm <- function (formula, family = gaussian, data, offset, weights, subset, na.
   fit$na.action <- attr(mf, "na.action")
   fit <- c(fit, list(call = call, formula = formula, terms = mt,
            data = data, offset = offset, control = control, 
-           contrasts = attr(X, "contrasts"), xlevels = .getXlevels(mt, mf), prior = prior) )
+           contrasts = attr(X, "contrasts"), xlevels = .getXlevels(mt, mf)) )
     
   class(fit) <- c("glm", "lm")
   if (family[[1]]==NegBin()[[1]]) class(fit) <- c("negbin", "glm", "lm")
@@ -476,15 +485,18 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
                 linear.predictors = eta, deviance = dev, aic = aic.model, loglik = loglik,
                 null.deviance = nulldev, iter = iter, weights = wt, prior.weights = weights,
                 df.residual = resdf, df.null = nulldf, y = y, z = z, converged = conv, boundary = boundary, 
-                intercept = intercept, prior.mean = prior.mean, prior.scale = prior.scale, 
+                intercept = intercept, 
                 prior.sd = prior.sd, dispersion = dispersion, group = group, group.vars = group.vars, 
                 ungroup.vars = ungroup.vars, method.coef = method.coef, family = family )
     
-    if (prior == "t") out$prior.df <- prior.df
+    if (prior == "t") 
+      out$prior <- list(prior="Stendent-t", mean=prior.mean, scale=prior.scale, df=prior.df)
+    if (prior == "de") 
+      out$prior <- list(prior="Double-exponential", mean=prior.mean, scale=prior.scale)
     if (prior == "mde") {
       out$p <- p
       out$ptheta <- theta
-      out$ss <- ss
+      out$prior <- list(prior="mixture double-exponential", mean=prior.mean, s0=ss[1], s1=ss[2])
     }
     if (nb) out$theta <- th
     
@@ -584,6 +596,24 @@ NegBin <- function (theta = 3, link = "log")
                  aic = aic, mu.eta = stats$mu.eta, initialize = initialize,
                  validmu = validmu, valideta = stats$valideta, simulate = simfun, theta = .Theta),
                  class = "family")
+}
+
+Student <- function(mean=0, scale=0.5, df=1)
+{
+  if (any(scale < 0)) stop("'scale' cannot be negative")
+  if (any(df < 0)) stop("'df' cannot be negative")
+  list(prior="t", mean=mean, scale=scale, df=df)
+}
+De <- function(mean=0, scale=0.5)
+{
+  if (any(scale < 0)) stop("'scale' cannot be negative")
+  list(prior="de", mean=mean, scale=scale)
+}
+mde <- function(mean=0, s0=0.04, s1=0.5)
+{
+  if (s0 < 0 | s1 < 0) stop("scale cannot be negative")
+  if (s0 > s1) stop("s0 should be smaller than s1")
+  list(prior="mde", mean=mean, ss=c(s0,s1))
 }
 
 #************************************************************************************
