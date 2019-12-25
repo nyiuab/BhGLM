@@ -32,11 +32,11 @@ bglm(formula, family = gaussian, data, offset, weights, subset, na.action,
   also can be Negative Binomial (\code{NegBin or "NegBin"}).
 }
   \item{prior}{
-  Prior distribustions for the coefficents. Three types of priors can be used; Student-t: \code{Student(mean, scale, df)}, Double-exponetial: \code{De(mean, scale)}, and mixture double-exponential: \code{mde(mean, s0, s1)}.
-  \code{mean}, \code{scale} and \code{df} can be a vector. For example, scale = c(a1,a2,...,ak); if k < the total number of predictors, it is internally expanded to c(a1,a2,...,ak, rep(ak,J-k)).
+  Prior distribustions for the coefficents. Three types of priors can be used; Student-t: \code{Student(mean, scale, df)} (default: mean=0, scale=0.5, df=1), Double-exponetial: \code{De(mean, scale)} (default: mean=0, scale=0.5), and mixture double-exponential: \code{mde(mean, s0, s1)}, s0 < s1, default: mean=0, s0=0.04, s1=0.5. 
+  The \code{mean}, \code{scale} and \code{df} can be a vector. For example, scale = c(a1,a2,...,ak); if k < the total number of predictors, it is internally expanded to c(a1,a2,...,ak, rep(ak,J-k)).
 }
 \item{group}{
-  a numeric vector, or an integer, or a list indicating the groups of predictors. 
+  a numeric vector, or an integer, or a list definining the groups of predictors. Only used for \code{mde}. 
   If \code{group = NULL}, all the predictors form a single group.
   If \code{group = K}, the predictors are evenly divided into groups each with \code{K} predictors.
   If \code{group} is a numberic vector, it defines groups as follows: Group 1: \code{(group[1]+1):group[2]}, Group 2: \code{(group[2]+1):group[3]}, Group 3: \code{(group[3]+1):group[4]}, .....  
@@ -61,13 +61,12 @@ bglm(formula, family = gaussian, data, offset, weights, subset, na.action,
 }
 
 \details{
-  This function sets up Bayesian hierarchical generalized linear models and fits the model using the EM-IWLS algorithm. It is an alteration of the standard function \code{\link{glm}} for fitting classical GLMs, and includes all the \code{\link{glm}} arguments and also some new arguments for the hierarchical modeling. 
+  This function sets up Bayesian hierarchical GLMs and fits the model using the EM-IWLS algorithm. It is an alteration of the standard function \code{\link{glm}} for classical GLMs, and includes all the \code{\link{glm}} arguments and also some new arguments for Bayesian modeling. 
 
   For \code{Student(mean, scale)} and \code{De(mean, scale)}, \code{scale} is modified internally: for a predictor with only one value nothing is changed; for a predictor x with exactly two unique values, we divide the user-specified scale \code{scale} by the range of x; for a predictor x with more than two unique values, we divide the user-specified scale by sd(x). For gaussian models, \code{scale} is further multiplied by sd(y).  
+  
+  The argument \code{group} is used for the prior \code{mde(mean, s0, s1)}, allowing for group-specific inclusion probabilities and thus incorporating group information (e.g. bilogical pathways). With the prior \code{mde(mean, s0, s1)}, the predictors can be grouped or ungrouped. For ungrouped predictors, the prior is double-exponential with scale \code{s1}. 
    
-  These priors are expressed hierarchically. Therefore, EM algorithms can be used to fit the models. The EM-IWLS algorithm estimates posterior modes of the parameters, and incorporates an EM algorithm into the iterative weighted least squares (IWLS) as implemented in the function \code{\link{glm}}. The computational cost of the algorithm is mainly in the step of jointly updating coefficients. This function implements two methods to update the coefficients, i.e.,  jointly updating all coefficients, or updating a group of coefficients at a time and proceeding by cycling through all the groups at each iteration. If the number of coefficients is large (say > 1000), the group-by-group method can be much faster.   
-
-  The models can include both ungrouped and grouped variables. Genetic and other scientific studies routinely generate very many predictor variables, which can be naturally grouped, with predictors in a group being biologically related or statistically correlated. In genetic studies, we can use biological pathways to construct groups. The argument \code{group} defines the groups. 
 }
 
 \value{

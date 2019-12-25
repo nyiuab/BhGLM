@@ -8,12 +8,14 @@
 }
 
 \description{
-  This function is to set up Bayesian GLMs or Cox models with spike-and-slab mixture double-exponential prior (called the Bayesian spike-and-slab mixture lasso), and to fit the model by incorporating EM steps into the fast coordinate descent algorithm. 
+  This function is to set up Bayesian GLMs or Cox survival models with spike-and-slab mixture double-exponential prior (called the Bayesian spike-and-slab mixture lasso), and to fit the model by incorporating EM steps into the fast coordinate descent algorithm. 
 }
 
 \usage{    
-bmlasso(x, y, family = c("gaussian", "binomial", "poisson", "cox"), offset = NULL, epsilon = 1e-04, maxit = 50, init = NULL, group = NULL, ss = c(0.04, 0.5),
-          Warning = FALSE, verbose = FALSE) 
+bmlasso(x, y, family = c("gaussian", "binomial", "poisson", "cox"), 
+        offset = NULL, epsilon = 1e-04, maxit = 50, init = NULL, 
+        ss = c(0.04, 0.5), group = NULL, 
+        Warning = FALSE, verbose = FALSE) 
 }
 
 %- maybe also 'usage' for other objects documented here.
@@ -42,18 +44,17 @@ bmlasso(x, y, family = c("gaussian", "binomial", "poisson", "cox"), offset = NUL
   \item{init}{
    vector of initial values for all coefficients (not for intercept). If not given, it will be internally produced. 
   }
+  \item{ss}{
+   a vector of two positive scale values (ss[1] < ss[2]) for the spike-and-slab mixture double-exponential prior,  leading to different shrinkage on different predictors and allowing for incorporation of group information.
+}
   \item{group}{
-  a numeric vector, or an integer, or a list indicating the groups of predictors. 
+  a numeric vector, or an integer, or a list defining the groups of predictors. 
   If \code{group = NULL}, all the predictors form a single group.
   If \code{group = K}, the predictors are evenly divided into groups each with \code{K} predictors.
   If \code{group} is a numberic vector, it defines groups as follows: Group 1: \code{(group[1]+1):group[2]}, Group 2: \code{(group[2]+1):group[3]}, Group 3: \code{(group[3]+1):group[4]}, .....  
   If \code{group} is a list of variable names, \code{group[[k]]} includes variables in the k-th group. 
   The mixture double-exponential prior is only used for grouped predictors. 
   For ungrouped predictors, the prior is double-exponential with scale \code{ss[2]} and mean 0. 
-}
-  \item{ss}{
-   a vector of two positive scale values for the spike-and-slab mixture double-exponential prior, allowing for different scales for different predictors, 
-   leading to different amount of shrinkage. smaller scale values give stronger shrinkage.
 }
   \item{Warning}{
   logical. If \code{TRUE}, show the error messages of not convergence and identifiability.
@@ -65,12 +66,8 @@ bmlasso(x, y, family = c("gaussian", "binomial", "poisson", "cox"), offset = NUL
 
 \details{
   This function sets up Bayesian GLMs and Cox models with spike-and-slab mixture double-exponential prior (Bayesian spike-and-slab mixture lasso), and fits the model 
-by incorporating EM steps into the fast coordinate descent algorithm implemented in the package \bold{glmnet}. 
-It is an alteration of the function \code{\link{glmnet}} in the package \bold{glmnet}. 
+by incorporating EM steps into the fast coordinate descent algorithm implemented in the package \bold{glmnet}. It takes advantage of the function \code{\link{glmnet}} in the package \bold{glmnet}. 
   
-  The mixture double-exponential prior is used for grouped predictors: \code{coefficients ~ DE(0, (1-d)*ss[1]+d*ss[2]), d ~ Bin(1; theta)};
-The mixture prior allows different shrinkage (penalty) values for different predictors.
-   
 }
 
 \value{
