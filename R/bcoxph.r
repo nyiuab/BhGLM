@@ -333,7 +333,9 @@ bcoxph.fit <- function(x, y, offset = rep(0, nobs), weights = rep(1, nobs), init
         out <- update.scale.p(b0=beta0[gvars], ss=ss, theta=theta)
         prior.scale[gvars] <- out[[1]]   
         p <- out[[2]]
-        theta <- update.ptheta.group(group.vars=group.vars, p=p)
+        if (!is.matrix(group))
+          theta <- update.ptheta.group(group.vars=group.vars, p=p)
+        else theta <- update.ptheta.network(theta=theta, p=p, w=group) 
       }
       
       prior.sd <- update.prior.sd(prior = prior, beta0 = beta0, prior.scale = prior.scale, 
@@ -412,6 +414,7 @@ bcoxph.fit <- function(x, y, offset = rep(0, nobs), weights = rep(1, nobs), init
   if (prior == "de") 
     fit$prior <- list(prior="Double-exponential", mean=prior.mean, scale=prior.scale)
   if (prior == "mde") {
+    fit$prior.scale <- prior.scale
     fit$p <- p
     fit$ptheta <- theta
     fit$prior <- list(prior="mixture double-exponential", mean=prior.mean, s0=ss[1], s1=ss[2])

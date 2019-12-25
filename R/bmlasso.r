@@ -2,7 +2,7 @@
 
 bmlasso <- function(x, y, family = c("gaussian", "binomial", "poisson", "cox"), offset = NULL,
                     epsilon = 1e-04, maxit = 50, init = NULL, 
-                    group = NULL, ss = c(0.04, 0.5), Warning = FALSE, verbose = FALSE) 
+                    ss = c(0.04, 0.5), group = NULL, Warning = FALSE, verbose = FALSE) 
 {
   if (!requireNamespace("glmnet")) install.packages("glmnet")
   require(glmnet)
@@ -96,7 +96,9 @@ bmlasso.fit <- function(x, y, family = "gaussian", offset = NULL, epsilon = 1e-0
     out <- update.scale.p(b0=b[gvars], ss=ss, theta=theta)
     prior.scale[gvars] <- out[[1]]   
     p <- out[[2]]
-    theta <- update.ptheta.group(group.vars=group.vars, p=p)
+    if (!is.matrix(group))
+      theta <- update.ptheta.group(group.vars=group.vars, p=p)
+    else theta <- update.ptheta.network(theta=theta, p=p, w=group)
     
     Pf <- 1/(prior.scale + 1e-10)
     f <- glmnet(x = x, y = y, family = family, offset = offset, alpha = 1, 

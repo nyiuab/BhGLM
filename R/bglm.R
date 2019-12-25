@@ -271,7 +271,9 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
                 out <- update.scale.p(b0=beta0[gvars], ss=ss, theta=theta)
                 prior.scale[gvars] <- out[[1]]   
                 p <- out[[2]]
-                theta <- update.ptheta.group(group.vars=group.vars, p=p)
+                if (!is.matrix(group))
+                  theta <- update.ptheta.group(group.vars=group.vars, p=p)
+                else theta <- update.ptheta.network(theta=theta, p=p, w=group) 
               }
               
               prior.sd <- update.prior.sd(prior = prior, beta0 = beta0, prior.scale = prior.scale, 
@@ -494,6 +496,7 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
     if (prior == "de") 
       out$prior <- list(prior="Double-exponential", mean=prior.mean, scale=prior.scale)
     if (prior == "mde") {
+      out$prior.scale <- prior.scale
       out$p <- p
       out$ptheta <- theta
       out$prior <- list(prior="mixture double-exponential", mean=prior.mean, s0=ss[1], s1=ss[2])
@@ -544,9 +547,20 @@ update.ptheta.group <- function(group.vars, p) # group-specific probability
   theta
 }
 
+update.ptheta.network <- function(theta, p, w) 
+{
+  for (j in 1:length(theta)) {  
+    mu <- w %*% theta
+    theta[j] <- (p[j] + mu[j] - w[j,j]*theta[j])/2 
+  } 
+  theta <- ifelse(theta < 0.01, 0.01, theta)
+  theta <- ifelse(theta > 0.99, 0.99, theta)
+  
+  theta
+}
 
 # from MASS
-NegBin <- function (theta = 3, link = "log")
+NegBin <- function (theta=3, link="log")
 {
   linktemp <- substitute(link)
   if (!is.character(linktemp))
@@ -687,18 +701,34 @@ Grouping <- function(all.var, group)
   n.vars <- length(all.var)
   group.vars <- list()
   
-  if (is.list(group)) group.vars <- group
-  else {
-    if (is.numeric(group) & length(group)>1) { 
-      group <- sort(group)  
-      if (group[length(group)] > n.vars) stop("wrong grouping")
+  if (is.matrix(group))
+  {
+    if (nrow(group)!=ncol(group) | ncol(group)>n.vars) 
+      stop("wrong dimension for 'group'")
+    if (any(rownames(group)!=colnames(group)))
+      stop("rownames should be the same as colnames")
+    if (any(!colnames(group)%in%all.var))
+      stop("variabe names in 'group' not in the model predictors")
+    group.vars <- colnames(group)
+    group <- abs(group)
+    wcol <- rowSums(group) - diag(group)
+    group <- group/wcol
+  }
+  else{
+    if (is.list(group)) group.vars <- group
+    else
+    {
+      if (is.numeric(group) & length(group)>1) { 
+        group <- sort(group)  
+        if (group[length(group)] > n.vars) stop("wrong grouping")
+      }
+      if (is.numeric(group) & length(group)==1)
+        group <- as.integer(seq(0, n.vars, length.out = n.vars/group + 1))
+      if (is.null(group)) group <- c(0, n.vars)
+      group <- unique(group)
+      for (j in 1:(length(group) - 1))
+        group.vars[[j]] <- all.var[(group[j] + 1):group[j + 1]]
     }
-    if (is.numeric(group) & length(group)==1)
-      group <- as.integer(seq(0, n.vars, length.out = n.vars/group + 1))
-    if (is.null(group)) group <- c(0, n.vars)
-    group <- unique(group)
-    for (j in 1:(length(group) - 1))
-      group.vars[[j]] <- all.var[(group[j] + 1):group[j + 1]]
   }
   all.group.vars <- unique(unlist(group.vars))
   
@@ -711,6 +741,16 @@ Grouping <- function(all.var, group)
   list(group=group, group.vars=group.vars, ungroup.vars=ungroup.vars, 
        group.new=group.new, var.new=var.new) 
 }
+
+autoscale <- function(x, min.x.sd=1e-04)
+{
+  scale <- apply(x, 2, sd)
+  scale <- ifelse(scale<=min.x.sd, 1, scale)
+  two <- which(apply(x, 2, function(u) {length(unique(u))==2}))
+  scale[two] <- apply(x[, two, drop=F], 2, function(u){max(u)-min(u)})
+  scale
+}
+
 
 
 # only used in simulation
@@ -728,15 +768,6 @@ link.vars <- function(group.vars) {
       linked.vars[[i]] <- linked.vars[[i]][-d]
   }
   linked.vars
-}
-
-autoscale <- function(x, min.x.sd=1e-04)
-{
-  scale <- apply(x, 2, sd)
-  scale <- ifelse(scale<=min.x.sd, 1, scale)
-  two <- which(apply(x, 2, function(u) {length(unique(u))==2}))
-  scale[two] <- apply(x[, two, drop=F], 2, function(u){max(u)-min(u)})
-  scale
 }
 
 #*************************************************************************
