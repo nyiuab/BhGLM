@@ -539,7 +539,7 @@ update.ptheta.group <- function(group.vars, p) # group-specific probability
   theta <- p
   for (j in 1:length(group.vars)) {  
     vars <- group.vars[[j]]
-    theta[vars] <- mean(p[vars])
+    theta[vars] <- mean(p[vars])  #posterior mode with theta~beta(1,1)
   } 
   theta <- ifelse(theta < 0.01, 0.01, theta)
   theta <- ifelse(theta > 0.99, 0.99, theta)
@@ -549,9 +549,13 @@ update.ptheta.group <- function(group.vars, p) # group-specific probability
 
 update.ptheta.network <- function(theta, p, w) 
 {
+  phi <- 2
   for (j in 1:length(theta)) {  
     mu <- w %*% theta
-    theta[j] <- (p[j] + mu[j] - w[j,j]*theta[j])/2 
+    m <- mu[j] - w[j,j]*theta[j]
+    a <- m*phi
+    b <- (1-m)*phi
+    theta[j] <- (p[j] + a)/(1 + a + b) # posterior mean
   } 
   theta <- ifelse(theta < 0.01, 0.01, theta)
   theta <- ifelse(theta > 0.99, 0.99, theta)
