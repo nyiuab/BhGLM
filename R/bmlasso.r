@@ -125,7 +125,7 @@ bmlasso.fit <- function(x, y, family = "gaussian", offset = NULL, epsilon = 1e-0
   names(f$coefficients) <- rownames(coef(f))
   f$linear.predictors <- predict(f, newx = x, type = "link", offset = offset)
   if (family == "gaussian")
-    f$dispersion <- bglm(y ~ f$linear.predictors - 1, start = 1, prior = "de", prior.mean = 1, prior.scale = 0, verbose = FALSE)$dispersion 
+    f$dispersion <- bglm(y ~ f$linear.predictors-1, start=1, prior=De(1,0), verbose=FALSE)$dispersion 
   
   f$iter <- iter
   f$prior.scale <- prior.scale
