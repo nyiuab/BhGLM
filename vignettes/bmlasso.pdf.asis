@@ -1,5 +1,5 @@
 
-%\VignetteIndexEntry{Bayesian spike-and-slab lasso or ridge GLMs and Cox models}
+%\VignetteIndexEntry{Bayesian spike-and-slab lasso GLMs and Cox models}
 %\VignetteEngine{R.rsp::asis}
 %\VignetteKeyword{PDF}
 %\VignetteKeyword{HTML}
