@@ -279,7 +279,7 @@ bcoxph.fit <- function(x, y, offset = rep(0, nobs), weights = rep(1, nobs), init
 {
   ss <- sort(ss)
   ss <- ifelse(ss <= 0, 0.001, ss)
-  if (prior == "mde")
+  if (prior == "mde" | prior == "mt")
     prior.sd <- prior.scale <- ss[length(ss)]  # used for ungrouped coefficients
   
   d <- prepare(x = x, intercept = FALSE, prior.mean = prior.mean, prior.sd = prior.sd, prior.scale = prior.scale, 
@@ -304,7 +304,7 @@ bcoxph.fit <- function(x, y, offset = rep(0, nobs), weights = rep(1, nobs), init
   if (length(group0) > 1) method.coef <- "group"
   
   # for mixture prior
-  if (prior == "mde") {
+  if (prior == "mde" | prior == "mt") {
     if (length(ss) != 2) stop("ss should have two positive values")
     gvars <- unlist(group.vars)
     theta <- p <- rep(0.5, length(gvars))
@@ -329,8 +329,8 @@ bcoxph.fit <- function(x, y, offset = rep(0, nobs), weights = rep(1, nobs), init
     if (iter > 1) {
       beta0 <- coefs.hat - prior.mean
       
-      if (prior == "mde") {
-        out <- update.scale.p(b0=beta0[gvars], ss=ss, theta=theta)
+      if (prior == "mde" | prior == "mt") {
+        out <- update.scale.p(prior=prior, df=prior.df[gvars], b0=beta0[gvars], ss=ss, theta=theta)
         prior.scale[gvars] <- out[[1]]   
         p <- out[[2]]
         if (!is.matrix(group))
@@ -410,14 +410,17 @@ bcoxph.fit <- function(x, y, offset = rep(0, nobs), weights = rep(1, nobs), init
   fit$method.coef <- method.coef
   
   if (prior == "t") 
-    fit$prior <- list(prior="Stendent-t", mean=prior.mean, scale=prior.scale, df=prior.df)
+    fit$prior <- list(prior=prior, mean=prior.mean, scale=prior.scale, df=prior.df)
   if (prior == "de") 
-    fit$prior <- list(prior="Double-exponential", mean=prior.mean, scale=prior.scale)
-  if (prior == "mde") {
+    fit$prior <- list(prior=prior, mean=prior.mean, scale=prior.scale)
+  if (prior == "mde" | prior == "mt") {
     fit$prior.scale <- prior.scale
     fit$p <- p
     fit$ptheta <- theta
-    fit$prior <- list(prior="mixture double-exponential", mean=prior.mean, s0=ss[1], s1=ss[2])
+    if (prior == "mde")
+      fit$prior <- list(prior=prior, mean=prior.mean, s0=ss[1], s1=ss[2])
+    if (prior == "mt") 
+      fit$prior <- list(prior=prior, mean=prior.mean, s0=ss[1], s1=ss[2], df=prior.df)
   }
   
   fit

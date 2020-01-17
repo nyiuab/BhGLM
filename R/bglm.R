@@ -97,11 +97,11 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
                mustart = NULL, offset = rep(0, nobs), family = gaussian(), control = glm.control(), intercept = TRUE,  
                prior = "de", group = NULL, method.coef = 1, 
                dispersion = 1, prior.mean = 0, prior.sd = 0.5, prior.scale = 1, prior.df = 1, ss = c(0.05, 0.1), 
-               Warning = FALSE)  # s.glm = "glm", xs = NULL, 
+               Warning = FALSE)   
 {
     ss <- sort(ss)
     ss <- ifelse(ss <= 0, 0.001, ss)
-    if (prior == "mde")
+    if (prior == "mde" | prior == "mt")
       prior.sd <- prior.scale <- ss[length(ss)]  # used for ungrouped coefficients
     
     if (is.null(dispersion)) dispersion <- 1
@@ -132,7 +132,7 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
     if (length(group0) > 1) method.coef <- "group"
     
     # for mixture prior
-    if (prior == "mde") {
+    if (prior == "mde" | prior == "mt") {
       if (length(ss) != 2) stop("ss should have two positive values")
       gvars <- unlist(group.vars)
       theta <- p <- rep(0.5, length(gvars))
@@ -147,8 +147,7 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
       library(MASS)
     }
        
-#********************************************      
-    
+   # *************************      
     x <- as.matrix(x)
     xnames <- dimnames(x)[[2]]
     ynames <- if (is.matrix(y))
@@ -254,21 +253,14 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
             z <- (eta - offset)[good] + (y - mu)[good]/mu.eta.val[good]
             w <- sqrt((weights[good] * mu.eta.val[good]^2)/varmu[good])
             ngoodobs <- as.integer(nobs - sum(!good))
-
-# not used                       
-#            if (s.glm == "truncated") {
-#              out <- truncated(y = y, s.x = s.x, eta = eta, Sd = sqrt(dispersion)) 
-#              z <- out[[1]] - offset
-#              w <- out[[2]]
-#            }
             
             w <- ifelse(w == 0, 1e-04, w) # I add
             
             if (iter > 1) {
               beta0 <- (coefs.hat - prior.mean)/sqrt(dispersion)
               
-              if (prior == "mde") {
-                out <- update.scale.p(b0=beta0[gvars], ss=ss, theta=theta)
+              if (prior == "mde" | prior == "mt") {
+                out <- update.scale.p(prior=prior, df=prior.df[gvars], b0=beta0[gvars], ss=ss, theta=theta)
                 prior.scale[gvars] <- out[[1]]   
                 p <- out[[2]]
                 if (!is.matrix(group))
@@ -379,7 +371,6 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
               if (n.df <= 0) n.df <- n.df0
               dispersion <- Sum/n.df 
             } 
-#            if (s.glm == "truncated") dispersion <- (dispersion + dispersionold)/2
             dispersion <- ifelse(dispersion > 1e+04,1e+04, dispersion) 
             dispersion <- ifelse(dispersion < 1e-04, 1e-04, dispersion)
             
@@ -492,16 +483,23 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
                 ungroup.vars = ungroup.vars, method.coef = method.coef, family = family )
     
     if (prior == "t") 
-      out$prior <- list(prior="Stendent-t", mean=prior.mean, scale=prior.scale, df=prior.df)
+      out$prior <- list(prior=prior, mean=prior.mean, scale=prior.scale, df=prior.df)
     if (prior == "de") 
-      out$prior <- list(prior="Double-exponential", mean=prior.mean, scale=prior.scale)
-    if (prior == "mde") {
+      out$prior <- list(prior=prior, mean=prior.mean, scale=prior.scale)
+    if (prior == "mde" | prior == "mt") {
       out$prior.scale <- prior.scale
       out$p <- p
       out$ptheta <- theta
-      out$prior <- list(prior="mixture double-exponential", mean=prior.mean, s0=ss[1], s1=ss[2])
+      if (prior == "mde")
+        out$prior <- list(prior=prior, mean=prior.mean, s0=ss[1], s1=ss[2])
+      if (prior == "mt") 
+        out$prior <- list(prior=prior, mean=prior.mean, s0=ss[1], s1=ss[2], df=prior.df)
     }
-    if (nb) out$theta <- th
+    if (nb){ 
+      out$theta <- as.vector(th)
+      out$SE.theta <- attr(th, "SE")
+      out$twologlik <- 2 * loglik
+    }
     
     return(out)
 }
@@ -512,7 +510,7 @@ update.prior.sd <- function (prior, beta0, prior.scale, prior.df, sd.x, min.x.sd
 {
   prior.scale <- prior.scale + 1e-04
   J <- length(beta0)
-  if (prior == "t")   
+  if (prior == "t" | prior == "mt")   
     prior.sd <- sqrt((beta0^2 + prior.df * prior.scale^2)/(1 + prior.df)) 
   if (prior == "de" | prior == "mde")     # prior.scale = lamda in Exp(1/(2*lamda^2) )   
     prior.sd <- sqrt(abs(beta0) * prior.scale)
@@ -524,10 +522,16 @@ update.prior.sd <- function (prior, beta0, prior.scale, prior.df, sd.x, min.x.sd
   prior.sd            
 }
 
-update.scale.p <- function(b0, ss, theta) 
+update.scale.p <- function(prior="mde", df=1, b0, ss, theta) 
 {
-  den0 <- (2 * ss[1])^(-1) * exp(-abs(b0)/ss[1]) # de density
-  den1 <- (2 * ss[2])^(-1) * exp(-abs(b0)/ss[2]) 
+  if (prior == "mde"){
+    den0 <- (2 * ss[1])^(-1) * exp(-abs(b0)/ss[1]) # de density
+    den1 <- (2 * ss[2])^(-1) * exp(-abs(b0)/ss[2]) 
+  }
+  if (prior == "mt"){
+    den0 <- (ss[1])^(-1) * (1 + b0^2/(df * ss[1]^2))^(-(df + 1)/2) # t density
+    den1 <- (ss[2])^(-1) * (1 + b0^2/(df * ss[2]^2))^(-(df + 1)/2)
+  }
   p <- theta * den1 / (theta * den1 + (1 - theta) * den0 + 1e-10)
   scale <- 1/((1 - p)/ss[1] + p/ss[2] + 1e-10)
   
@@ -632,6 +636,13 @@ mde <- function(mean=0, s0=0.04, s1=0.5)
   if (s0 < 0 | s1 < 0) stop("scale cannot be negative")
   if (s0 > s1) stop("s0 should be smaller than s1")
   list(prior="mde", mean=mean, ss=c(s0,s1))
+}
+mt <- function(mean=0, s0=0.04, s1=0.5, df=1)
+{
+  if (s0 < 0 | s1 < 0) stop("scale cannot be negative")
+  if (s0 > s1) stop("s0 should be smaller than s1")
+  if (any(df < 0)) stop("'df' cannot be negative")
+  list(prior="mt", mean=mean, ss=c(s0,s1), df=df)
 }
 
 #************************************************************************************
