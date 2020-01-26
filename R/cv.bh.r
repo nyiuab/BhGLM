@@ -348,9 +348,9 @@ cv.gam.glm <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
   }
   
   out <- list()
-  if (nrow(measures0) == 1) out$measures <- colMeans(measures0, na.rm = TRUE)
+  if (nrow(measures0)==1) out$measures <- colMeans(measures0, na.rm=TRUE)
   else {
-    out$measures <- rbind(colMeans(measures0, na.rm = TRUE), apply(measures0, 2, sd, na.rm = TRUE))
+    out$measures <- rbind(colMeans(measures0, na.rm=TRUE), apply(measures0, 2, sd, na.rm=TRUE))
     rownames(out$measures) <- c("mean", "sd")
   }
   out$measures <- round(out$measures, digits=3)
@@ -383,7 +383,7 @@ cv.gam.coxph <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
       subset1 <- rep(TRUE, n)
       omit <- which(foldid[, k] == i)
       subset1[omit] <- FALSE
-      fit <- update(object, subset = subset1)
+      fit <- update(object, subset=subset1)
       lp[omit] <- predict(fit, newdata=data.obj[omit, , drop=FALSE])
       
       if (verbose) {

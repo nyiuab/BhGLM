@@ -1,10 +1,10 @@
 
 #*************************************************************************************************************
 
-bglm <- function (formula, family = gaussian, data, offset, weights, subset, na.action, 
-           start = NULL, etastart, mustart, control = glm.control(epsilon = 1e-04, maxit = 50), 
-           prior = Student(0, 0.5, 1), group = NULL, method.coef, 
-           Warning = FALSE, verbose = FALSE, ...)  
+bglm <- function (formula, family=gaussian, data, offset, weights, subset, na.action, 
+           start=NULL, etastart, mustart, control=glm.control(epsilon=1e-04, maxit=50), 
+           prior=Student(), group=NULL, method.coef, prior.sd=0.5, dispersion=1,
+           Warning=FALSE, verbose=FALSE, ...)  
 {
   start.time <- Sys.time()
   
@@ -16,8 +16,6 @@ bglm <- function (formula, family = gaussian, data, offset, weights, subset, na.
   ss <- prior$ss
   if (is.null(ss)) ss <- c(0.04, 0.5)
   prior <- prior[[1]]
-  dispersion <- 1 
-  prior.sd <- 0.5 
   if (missing(method.coef)) method.coef <- NULL 
   
   contrasts <- NULL
@@ -364,7 +362,7 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
                   cat("Step halved: new deviance =", dev, "\n")
             }
             
-            if ( !(family[[1]] %in% c("binomial", "poisson")) ){
+            if ( !(family[[1]] %in% c("binomial", "poisson")) & !nb ){
               Sum <- sum((w * (z - (eta - offset)[good]))^2) + sum((coefs.hat - prior.mean)^2/(prior.sd^2 + 1e-04)) 
               n.df0 <- nobs
               n.df <- n.df0 - length(coefs.hat[prior.sd >= 1e+04])
