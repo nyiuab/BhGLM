@@ -40,6 +40,9 @@ export(Student)
 export(De)
 export(mde)
 export(mt)
+
+export(mbglm)
+export(summary.mbglm)
 #************************************
 
 
