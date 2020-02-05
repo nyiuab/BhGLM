@@ -1,6 +1,6 @@
 
 
-mbglm <- function(y, formula, data, family=NegBin(), prior=Student(),
+mbglm <- function(y, formula, data, family=NegBin(), prior=Student(0, 1),
                   verbose=TRUE)
 {
   start.time <- Sys.time()

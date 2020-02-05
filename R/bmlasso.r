@@ -1,8 +1,9 @@
 
 
-bmlasso <- function(x, y, family = c("gaussian", "binomial", "poisson", "cox"), offset = NULL,
-                    epsilon = 1e-04, maxit = 50, init = NULL, 
-                    ss = c(0.04, 0.5), group = NULL, Warning = FALSE, verbose = FALSE) 
+bmlasso <- function(x, y, family=c("gaussian", "binomial", "poisson", "cox"), offset=NULL,
+                    epsilon=1e-04, maxit=50, init=NULL, 
+                    ss=c(0.04, 0.5), group=NULL, w.theta=NULL, 
+                    Warning=FALSE, verbose=FALSE) 
 {
   if (!requireNamespace("glmnet")) install.packages("glmnet")
   require(glmnet)
@@ -26,8 +27,8 @@ bmlasso <- function(x, y, family = c("gaussian", "binomial", "poisson", "cox"), 
   if (family == "gaussian") y <- (y - mean(y))/sd(y)
   if (!is.null(init) & length(init) != ncol(x)) stop("give an initial value to each coefficient (not intercept)")
 
-  f <- bmlasso.fit(x = x, y = y, family = family, offset = offset, epsilon = epsilon, maxit = maxit, init = init,
-                   group = group, ss = ss, Warning = Warning)
+  f <- bmlasso.fit(x=x, y=y, family=family, offset=offset, epsilon=epsilon, maxit=maxit, init=init,
+                   group=group, ss=ss, w.theta=w.theta, Warning=Warning)
   
   f$call <- call
   if (family == "cox") class(f) <- c(class(f), "bmlasso", "COXPH") 
@@ -44,9 +45,9 @@ bmlasso <- function(x, y, family = c("gaussian", "binomial", "poisson", "cox"), 
 
 # ******************************************************************************
 
-bmlasso.fit <- function(x, y, family = "gaussian", offset = NULL, epsilon = 1e-04, maxit = 50, 
-                        init = rep(0, ncol(x)), group = NULL, ss = c(0.04, 0.5), 
-                        Warning = FALSE)
+bmlasso.fit <- function(x, y, family="gaussian", offset=NULL, epsilon=1e-04, maxit=50, 
+                        init=rep(0, ncol(x)), group=NULL, ss=c(0.04, 0.5), w.theta=NULL, 
+                        Warning=FALSE)
 {  
   ss <- sort(ss)
   ss <- ifelse(ss <= 0, 0.001, ss)
@@ -73,6 +74,10 @@ bmlasso.fit <- function(x, y, family = "gaussian", offset = NULL, epsilon = 1e-0
   gvars <- unlist(group.vars)
   theta <- p <- rep(0.5, length(gvars))
   names(theta) <- names(p) <- gvars 
+  if (is.null(w.theta)) w.theta <- rep(1, length(gvars))
+  if (length(w.theta)!=length(gvars)) stop("all grouped variables should have w.theta")
+  if (any(w.theta > 1 | w.theta < 0)) stop("w.theta should be in [0,1]")
+  names(w.theta) <- gvars
   
   if (is.null(init)) {
     for (k in 1:5) {
@@ -97,7 +102,7 @@ bmlasso.fit <- function(x, y, family = "gaussian", offset = NULL, epsilon = 1e-0
     prior.scale[gvars] <- out[[1]]   
     p <- out[[2]]
     if (!is.matrix(group))
-      theta <- update.ptheta.group(group.vars=group.vars, p=p)
+      theta <- update.ptheta.group(group.vars=group.vars, p=p, w.theta=w.theta)
     else theta <- update.ptheta.network(theta=theta, p=p, w=group)
     
     Pf <- 1/(prior.scale + 1e-10)

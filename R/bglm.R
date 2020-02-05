@@ -3,8 +3,8 @@
 
 bglm <- function (formula, family=gaussian, data, offset, weights, subset, na.action, 
            start=NULL, etastart, mustart, control=glm.control(epsilon=1e-04, maxit=50), 
-           prior=Student(), group=NULL, method.coef, prior.sd=0.5, dispersion=1,
-           Warning=FALSE, verbose=FALSE, ...)  
+           prior=Student(), group=NULL, method.coef, w.theta=NULL, 
+           prior.sd=0.5, dispersion=1, Warning=FALSE, verbose=FALSE, ...)  
 {
   start.time <- Sys.time()
   
@@ -63,13 +63,13 @@ bglm <- function (formula, family=gaussian, data, offset, weights, subset, na.ac
   mustart <- model.extract(mf, "mustart")
   etastart <- model.extract(mf, "etastart")
   
-  fit <- bglm.fit(x = X, y = Y, weights = weights, start = start,
-                  etastart = etastart, mustart = mustart, offset = offset, 
-                  family = family, control = control, intercept = attr(mt, "intercept") > 0,
-                  prior = prior, group = group, method.coef = method.coef, 
-                  dispersion = dispersion, prior.mean = prior.mean, prior.sd = prior.sd, 
-                  prior.scale = prior.scale, prior.df = prior.df, ss = ss, 
-                  Warning = Warning)
+  fit <- bglm.fit(x=X, y=Y, weights=weights, start=start,
+                  etastart=etastart, mustart=mustart, offset=offset, 
+                  family=family, control=control, intercept=attr(mt, "intercept") > 0,
+                  prior=prior, group=group, method.coef=method.coef, 
+                  dispersion=dispersion, prior.mean=prior.mean, prior.sd=prior.sd, 
+                  prior.scale=prior.scale, prior.df=prior.df, ss=ss, w.theta=w.theta,
+                  Warning=Warning)
   
   fit$model <- mf
   fit$na.action <- attr(mf, "na.action")
@@ -91,11 +91,11 @@ bglm <- function (formula, family=gaussian, data, offset, weights, subset, na.ac
 
 #*******************************************************************************
 
-bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NULL, 
-               mustart = NULL, offset = rep(0, nobs), family = gaussian(), control = glm.control(), intercept = TRUE,  
-               prior = "de", group = NULL, method.coef = 1, 
-               dispersion = 1, prior.mean = 0, prior.sd = 0.5, prior.scale = 1, prior.df = 1, ss = c(0.05, 0.1), 
-               Warning = FALSE)   
+bglm.fit <- function (x, y, weights=rep(1, nobs), start=NULL, etastart=NULL, mustart=NULL, 
+               offset=rep(0, nobs), family=gaussian(), control=glm.control(), intercept=TRUE,  
+               prior="de", group=NULL, method.coef=1, 
+               dispersion=1, prior.mean=0, prior.sd=0.5, prior.scale=1, prior.df=1, ss=c(0.05, 0.1), 
+               w.theta=NULL, Warning=FALSE)   
 {
     ss <- sort(ss)
     ss <- ifelse(ss <= 0, 0.001, ss)
@@ -135,6 +135,11 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
       gvars <- unlist(group.vars)
       theta <- p <- rep(0.5, length(gvars))
       names(theta) <- names(p) <- gvars
+    
+      if (is.null(w.theta)) w.theta <- rep(1, length(gvars))
+      if (length(w.theta)!=length(gvars)) stop("all grouped variables should have w.theta")
+      if (any(w.theta > 1 | w.theta < 0)) stop("w.theta should be in [0,1]")
+      names(w.theta) <- gvars
     }
     
     # for negative binomial model
@@ -262,7 +267,7 @@ bglm.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NUL
                 prior.scale[gvars] <- out[[1]]   
                 p <- out[[2]]
                 if (!is.matrix(group))
-                  theta <- update.ptheta.group(group.vars=group.vars, p=p)
+                  theta <- update.ptheta.group(group.vars=group.vars, p=p, w.theta=w.theta)
                 else theta <- update.ptheta.network(theta=theta, p=p, w=group) 
               }
               
@@ -533,16 +538,22 @@ update.scale.p <- function(prior="mde", df=1, b0, ss, theta)
   p <- theta * den1 / (theta * den1 + (1 - theta) * den0 + 1e-10)
   scale <- 1/((1 - p)/ss[1] + p/ss[2] + 1e-10)
   
-  list(scale = scale, p = p)
+  list(scale=scale, p=p)
 }
 
-update.ptheta.group <- function(group.vars, p) # group-specific probability
+update.ptheta.group <- function(group.vars, p, w.theta) # group-specific probability
 {
+  f <- function(theta, w, p) {
+    sum(p*log(theta^w) + (1-p)*log(1-theta^w))
+  }
   theta <- p
   for (j in 1:length(group.vars)) {  
     vars <- group.vars[[j]]
-    theta[vars] <- mean(p[vars])  #posterior mode with theta~beta(1,1)
+#    theta[vars] <- mean(p[vars])  #posterior mode with theta~beta(1,1)
+    theta[vars] <- optimize(f, interval=c(0, 1), 
+                            w=w.theta[vars], p=p[vars], maximum=T)$maximum
   } 
+  theta <- theta^w.theta
   theta <- ifelse(theta < 0.01, 0.01, theta)
   theta <- ifelse(theta > 0.99, 0.99, theta)
   
