@@ -6,7 +6,7 @@ mbglm <- function(y, formula, data, family=NegBin(), prior=Student(0, 1),
   start.time <- Sys.time()
   
   call <- match.call()
-  y <- as.matrix(y)
+  y <- as(y, "matrix")
   if (NCOL(y)==1) stop("'y' should include multiple columns (responses)")
   if (is.null(colnames(y))) colnames(y) <- paste("y", 1:ncol(y), sep="")
   if (missing(data)) data <- NULL
@@ -40,7 +40,7 @@ mbglm <- function(y, formula, data, family=NegBin(), prior=Student(0, 1),
   res
 }
 
-summary.mbglm <- function(object, adj.p=FALSE, vr.name=NULL) 
+summary.mbglm <- function(object, vr.name=NULL) 
 {
   obj.fit <- object$fit
   obj.resp <- object$responses
@@ -55,16 +55,14 @@ summary.mbglm <- function(object, adj.p=FALSE, vr.name=NULL)
   variables <- rownames(res)
   res <- data.frame(responses, variables, res)
   rownames(res) <- NULL
-  
-  if (adj.p)
+  res$padj <- res$pvalue
+  for(j in 1:length(obj.vars))
   {
-    for(j in 1:length(obj.vars))
-    {
-      p <- res[res[,"variables"]==obj.vars[j], "pvalue"]
-      nam <- rownames(res[res[,2]==obj.vars[j], ])
-      res[nam, "pvalue"] <- signif(p.adjust(p, method="fdr"), 2)
-    }
+    p <- res[res[,"variables"]==obj.vars[j], "pvalue"]
+    nam <- rownames(res[res[,2]==obj.vars[j], ])
+    res[nam, "padj"] <- signif(p.adjust(p, method="fdr"), 2)
   }
+  
   out <- res
   
   if (!is.null(vr.name))
