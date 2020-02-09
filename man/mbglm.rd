@@ -13,9 +13,9 @@
 
 \usage{  
 mbglm(y, formula, data, family=NegBin(), prior=Student(0,1),
-      verbose=TRUE)
+      min.p=0, verbose=TRUE)
       
-summary.mbglm(object, vr.name=NULL)
+summary.mbglm(object, vr.name=NULL, sort=FALSE)
 }
 
 \arguments{
@@ -28,12 +28,18 @@ summary.mbglm(object, vr.name=NULL)
   \item{data, family, prior, verbose}{ 
   These arguments are the same as in \code{\link{bglm}}.
 }
+  \item{min.p}{
+  a value in [0, 1). The responses with the proportion of non-zero values > min.p are analyzed.
+}
 
   \item{object}{ 
   an object from \code{\link{mbglm}}.
 }
   \item{vr.name}{
   name of a variable or response. 
+}
+  \item{sort}{
+  sort by the adjusted p-values into ascending order.
 }
 
 }
@@ -92,16 +98,16 @@ obj = cumNorm(obj, p=cumNormStat(obj)) #set p=1: generate total reads
 s = normFactors(obj)
 s = unlist(s)
 
-# analyze all taxa using Bayesian negative binomial model
+# analyze taxa with nonzero proportion > min.p
 f = mbglm(y=otu, formula=~ Days + Age + Race + preg + offset(log(s)), 
-          family=NegBin(), prior=Student(0, 1))
+          family=NegBin(), prior=Student(0, 1), min.p=0.1)
 
-out = summary(f, vr.name="preg")[[2]]
+out = summary.mbglm(f, vr.name="preg", sort=T)[[2]]
+#out = summary.mbglm(f, vr.name="Finegoldia.magna")[[2]]
 out
-coefs=out[,3]; names(coefs)=out[,1]
-sds=out[,4]
-padj=out[,6]
-plot.bh(coefs=coefs,sds=sds,pvalues=padj, threshold=0.001,
-        gap=1000)
+coefs = out[,1]
+sds = out[,2]
+padj = out[,4]
+plot.bh(coefs=coefs, sds=sds, pvalues=padj, threshold=0.001, gap=1000)
 
 }
