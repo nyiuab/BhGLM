@@ -2,7 +2,7 @@
 bpolr <- function (formula, data, weights, start, subset, na.action, 
                    method = c("logistic", "probit", "loglog", "cloglog", "cauchit"), 
                    contrasts = NULL, Hess = TRUE, prior = Student(0, 0.5, 1),  
-                   verbose = FALSE, ...) 
+                   verbose = FALSE) 
 {
   if (!requireNamespace("MASS")) install.packages("MASS")
     library(MASS)
@@ -11,6 +11,7 @@ bpolr <- function (formula, data, weights, start, subset, na.action,
     prior.mean <- prior$mean
     prior.scale <- prior$scale
     prior.df <- prior$df
+    autoscale <- prior$autoscale
     
     model <- TRUE 
     logit <- function(p) log(p/(1 - p))
@@ -113,7 +114,8 @@ bpolr <- function (formula, data, weights, start, subset, na.action,
     if (length(prior.df) < J) 
       prior.df <- c(prior.df, rep(prior.df[length(prior.df)], J - length(prior.df)) )
 
-    prior.scale <- prior.scale / autoscale(x, min.x.sd=1e-04)
+    if (autoscale)
+      prior.scale <- prior.scale / auto_scale(x, min.x.sd=1e-04)
     
     prior.counts.for.bins <- 1/(q + 1)
     if (length(prior.counts.for.bins) == 1) prior.counts.for.bins <- rep(prior.counts.for.bins, q + 1)

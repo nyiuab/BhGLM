@@ -64,7 +64,6 @@ bmlasso.fit <- function(x, y, family="gaussian", offset=NULL, epsilon=1e-04, max
   group <- d$group
   group.vars <- d$group.vars
   ungroup.vars <- d$ungroup.vars
-  prior.scale <- prior.scale / autoscale(x, min.x.sd=1e-04)
   if (intercept){
     x <- x[, -1]
     prior.scale <- prior.scale[-1]

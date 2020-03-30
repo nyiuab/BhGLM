@@ -7,6 +7,9 @@ bcoxph <- function (formula, data, weights, subset, na.action, init,
   if (!requireNamespace("survival")) install.packages("survival")
     require(survival)
     start.time <- Sys.time()
+    
+    autoscale <- prior$autoscale
+    if (is.null(autoscale)) autoscale <- FALSE
     prior.mean <- prior$mean
     prior.scale <- prior$scale
     if (is.null(prior.scale)) prior.scale <- 0.5
@@ -232,8 +235,8 @@ bcoxph <- function (formula, data, weights, subset, na.action, init,
                       control=control, strats=factor(strats),
                       ties=ties, prior=prior, group=group, method.coef=method.coef, 
                       prior.mean=prior.mean, prior.sd=prior.sd, 
-                      prior.scale=prior.scale, prior.df=prior.df, ss=ss, w.theta=w.theta,
-                      Warning=Warning) 
+                      prior.scale=prior.scale, prior.df=prior.df, autoscale=autoscale,
+                      ss=ss, w.theta=w.theta, Warning=Warning) 
     
     na.action <- attr(mf, "na.action")
     if (length(na.action)) 
@@ -275,8 +278,8 @@ bcoxph <- function (formula, data, weights, subset, na.action, init,
 bcoxph.fit <- function(x, y, offset=rep(0, nobs), weights=rep(1, nobs), init=0, strats=NULL,
                        control=coxph.control(eps=1e-04, iter.max=50), ties="efron", 
                        prior="t", group=NULL, method.coef=NULL, 
-                       prior.mean=0, prior.sd=1, prior.scale=1, prior.df=1, ss=c(0.05, 0.1), w.theta=NULL, 
-                       Warning=FALSE) 
+                       prior.mean=0, prior.sd=1, prior.scale=1, prior.df=1, autoscale=TRUE,
+                       ss=c(0.05, 0.1), w.theta=NULL, Warning=FALSE) 
 {
   ss <- sort(ss)
   ss <- ifelse(ss <= 0, 0.001, ss)
@@ -296,7 +299,8 @@ bcoxph.fit <- function(x, y, offset=rep(0, nobs), weights=rep(1, nobs), init=0, 
   group.vars <- d$group.vars
   ungroup.vars <- d$ungroup.vars
 
-  prior.scale <- prior.scale / autoscale(x, min.x.sd)
+  if (autoscale)
+    prior.scale <- prior.scale / auto_scale(x, min.x.sd)
     
   g0 <- Grouping(all.var = colnames(x), group = method.coef)
   group0 <- g0$group.vars

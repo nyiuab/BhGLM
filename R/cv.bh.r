@@ -43,7 +43,7 @@ cv.bh <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
 
 generate.foldid <- function(nobs, nfolds=10, foldid=NULL, ncv=1)
 {
-  if (nfolds > nobs) nfolds <- n
+  if (nfolds > nobs) nfolds <- nobs
   if (nfolds == nobs) ncv <- 1
   if (is.null(foldid)) {
    foldid <- array(NA, c(nobs, ncv)) 
@@ -328,8 +328,9 @@ cv.gam.glm <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
       fit <- update(object, subset = subset1)
       lp[omit] <- predict(fit, newdata=data.obj[omit, , drop=FALSE])
       y.fitted[omit] <- object$family$linkinv(lp[omit])
-      if (fam[[1]] == "NegBin") fit$dispersion <- fit$family$getTheta(TRUE)
-      dd <- suppressWarnings( measure.glm(y.obj[omit], y.fitted[omit], family=fam, dispersion=fit$dispersion) ) 
+      disp <- fit$sig2
+      if (fam[[1]] == "NegBin") disp <- fit$family$getTheta(TRUE)
+      dd <- suppressWarnings( measure.glm(y.obj[omit], y.fitted[omit], family=fam, dispersion=disp) ) 
       deviance <- c(deviance, dd["deviance"])
       
       if (verbose) {

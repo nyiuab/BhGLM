@@ -103,7 +103,9 @@ measure.glm <- function(y, y.fitted, family, dispersion = 1)
   if (family=="binomial" | family=="quasibinomial") {
     if (!requireNamespace("pROC")) install.packages("pROC")
     require(pROC)
-    AUC <- suppressMessages( pROC::auc(y, mu) )
+    if (length(unique(y)) > 1)
+      AUC <- suppressMessages( pROC::auc(y, mu) )
+    else AUC <- NULL
     AUC <- as.numeric(AUC)
     misclassification <- mean(abs(y - mu) >= 0.5, na.rm = TRUE)
     measures <- list(deviance=deviance, auc=AUC, mse=mse, mae=mae, 

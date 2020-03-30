@@ -4,10 +4,12 @@
 bglm <- function (formula, family=gaussian, data, offset, weights, subset, na.action, 
            start=NULL, etastart, mustart, control=glm.control(epsilon=1e-04, maxit=50), 
            prior=Student(), group=NULL, method.coef, w.theta=NULL, 
-           prior.sd=0.5, dispersion=1, Warning=FALSE, verbose=FALSE, ...)  
+           prior.sd=0.5, dispersion=1, Warning=FALSE, verbose=FALSE)  
 {
   start.time <- Sys.time()
   
+  autoscale <- prior$autoscale
+  if (is.null(autoscale)) autoscale <- FALSE
   prior.mean <- prior$mean
   prior.scale <- prior$scale
   if (is.null(prior.scale)) prior.scale <- 0.5
@@ -68,8 +70,8 @@ bglm <- function (formula, family=gaussian, data, offset, weights, subset, na.ac
                   family=family, control=control, intercept=attr(mt, "intercept") > 0,
                   prior=prior, group=group, method.coef=method.coef, 
                   dispersion=dispersion, prior.mean=prior.mean, prior.sd=prior.sd, 
-                  prior.scale=prior.scale, prior.df=prior.df, ss=ss, w.theta=w.theta,
-                  Warning=Warning)
+                  prior.scale=prior.scale, prior.df=prior.df, autoscale=autoscale,
+                  ss=ss, w.theta=w.theta, Warning=Warning)
   
   fit$model <- mf
   fit$na.action <- attr(mf, "na.action")
@@ -94,8 +96,8 @@ bglm <- function (formula, family=gaussian, data, offset, weights, subset, na.ac
 bglm.fit <- function (x, y, weights=rep(1, nobs), start=NULL, etastart=NULL, mustart=NULL, 
                offset=rep(0, nobs), family=gaussian(), control=glm.control(), intercept=TRUE,  
                prior="de", group=NULL, method.coef=1, 
-               dispersion=1, prior.mean=0, prior.sd=0.5, prior.scale=1, prior.df=1, ss=c(0.05, 0.1), 
-               w.theta=NULL, Warning=FALSE)   
+               dispersion=1, prior.mean=0, prior.sd=0.5, prior.scale=1, prior.df=1, autoscale=TRUE,
+               ss=c(0.05, 0.1), w.theta=NULL, Warning=FALSE)   
 {
     ss <- sort(ss)
     ss <- ifelse(ss <= 0, 0.001, ss)
@@ -104,8 +106,8 @@ bglm.fit <- function (x, y, weights=rep(1, nobs), start=NULL, etastart=NULL, mus
     
     if (is.null(dispersion)) dispersion <- 1
     
-    d <- prepare(x = x, intercept = intercept, prior.mean = prior.mean, prior.sd = prior.sd, prior.scale = prior.scale, 
-                 prior.df = prior.df, group = group)
+    d <- prepare(x=x, intercept=intercept, prior.mean=prior.mean, prior.sd=prior.sd, prior.scale=prior.scale, 
+                 prior.df=prior.df, group=group)
     x <- d$x
     prior.mean <- d$prior.mean 
     prior.sd <- d$prior.sd 
@@ -117,8 +119,10 @@ bglm.fit <- function (x, y, weights=rep(1, nobs), start=NULL, etastart=NULL, mus
     group.vars <- d$group.vars
     ungroup.vars <- d$ungroup.vars
     
-    prior.scale <- prior.scale / autoscale(x, min.x.sd)
-    if (family[[1]]=="gaussian") prior.scale <- prior.scale * sd(y)
+    if (autoscale){
+      prior.scale <- prior.scale / auto_scale(x, min.x.sd)
+      if (family[[1]]=="gaussian") prior.scale <- prior.scale * sd(y)
+    }
     
     x0 <- x
     if (intercept) x0 <- x[, -1, drop = FALSE] 
@@ -544,7 +548,7 @@ update.scale.p <- function(prior="mde", df=1, b0, ss, theta)
 update.ptheta.group <- function(group.vars, p, w.theta) # group-specific probability
 {
   f <- function(theta, w, p) {
-    sum(p*log(theta^w) + (1-p)*log(1-theta^w))
+    sum(p*log(theta*w) + (1-p)*log(1-theta*w))
   }
   theta <- p
   for (j in 1:length(group.vars)) {  
@@ -553,7 +557,7 @@ update.ptheta.group <- function(group.vars, p, w.theta) # group-specific probabi
     theta[vars] <- optimize(f, interval=c(0, 1), 
                             w=w.theta[vars], p=p[vars], maximum=T)$maximum
   } 
-  theta <- theta^w.theta
+  theta <- theta*w.theta
   theta <- ifelse(theta < 0.01, 0.01, theta)
   theta <- ifelse(theta > 0.99, 0.99, theta)
   
@@ -629,16 +633,16 @@ NegBin <- function (theta=3, link="log")
                  class = "family")
 }
 
-Student <- function(mean=0, scale=0.5, df=1)
+Student <- function(mean=0, scale=0.5, df=1, autoscale=TRUE)
 {
   if (any(scale < 0)) stop("'scale' cannot be negative")
   if (any(df < 0)) stop("'df' cannot be negative")
-  list(prior="t", mean=mean, scale=scale, df=df)
+  list(prior="t", mean=mean, scale=scale, df=df, autoscale=autoscale)
 }
-De <- function(mean=0, scale=0.5)
+De <- function(mean=0, scale=0.5, autoscale=TRUE)
 {
   if (any(scale < 0)) stop("'scale' cannot be negative")
-  list(prior="de", mean=mean, scale=scale)
+  list(prior="de", mean=mean, scale=scale, autoscale=autoscale)
 }
 mde <- function(mean=0, s0=0.04, s1=0.5)
 {
@@ -653,6 +657,16 @@ mt <- function(mean=0, s0=0.04, s1=0.5, df=1)
   if (any(df < 0)) stop("'df' cannot be negative")
   list(prior="mt", mean=mean, ss=c(s0,s1), df=df)
 }
+
+auto_scale <- function(x, min.x.sd=1e-04)
+{
+  scale <- apply(x, 2, sd)
+  scale <- ifelse(scale<=min.x.sd, 1, scale)
+  two <- which(apply(x, 2, function(u) {length(unique(u))==2}))
+  scale[two] <- apply(x[, two, drop=F], 2, function(u){max(u)-min(u)})
+  scale
+}
+
 
 #************************************************************************************
 
@@ -764,15 +778,6 @@ Grouping <- function(all.var, group)
   
   list(group=group, group.vars=group.vars, ungroup.vars=ungroup.vars, 
        group.new=group.new, var.new=var.new) 
-}
-
-autoscale <- function(x, min.x.sd=1e-04)
-{
-  scale <- apply(x, 2, sd)
-  scale <- ifelse(scale<=min.x.sd, 1, scale)
-  two <- which(apply(x, 2, function(u) {length(unique(u))==2}))
-  scale[two] <- apply(x[, two, drop=F], 2, function(u){max(u)-min(u)})
-  scale
 }
 
 
