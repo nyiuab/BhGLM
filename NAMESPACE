@@ -9,6 +9,8 @@ export(glmNet)
 
 export(summary.bh)
 export(plot.bh)
+export(vcov.bh)
+export(waldtest.bh)
 
 export(measure.bh)
 export(measure.glm)
@@ -43,6 +45,7 @@ export(mt)
 
 export(mbglm)
 export(summary.mbglm)
+
 #************************************
 
 
