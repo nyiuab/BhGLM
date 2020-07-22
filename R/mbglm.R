@@ -60,7 +60,7 @@ summary.mbglm <- function(object, vr.name=NULL, sort=FALSE)
     nam <- rownames(res[res[,2]==obj.vars[j], ])
     res[nam, "padj"] <- signif(p.adjust(p, method="fdr"), 2)
   }
-  
+  colnames(res)[3:4] <- c("Estimate", "Std.Error")
   out <- res
   
   if (!is.null(vr.name))
