@@ -97,7 +97,6 @@ by incorporating EM steps into the fast coordinate descent algorithm implemented
 }
 
 \examples{
-
 library(BhGLM)
 library(survival)
 library(glmnet)

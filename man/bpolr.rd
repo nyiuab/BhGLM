@@ -18,7 +18,7 @@
 bpolr(formula, data, weights, start, subset, na.action, 
       method = c("logistic", "probit", "loglog", "cloglog", "cauchit"), 
       contrasts = NULL, Hess = TRUE, prior = Student(0, 0.5, 1), 
-      verbose = FALSE, ...) 
+      verbose = FALSE) 
 }
 
 %- maybe also 'usage' for other objects documented here.
@@ -30,10 +30,7 @@ bpolr(formula, data, weights, start, subset, na.action,
   Initial values for the coefficients (not for zeta).
 }
   \item{prior}{
-  Prior for the coefficents. only Student-t, \code{Student(mean, scale, df)}, can be used. \code{mean}, \code{scale} and \code{df} can be a vector. For example, scale = c(a1,a2,...,ak); if k < the total number of predictors, it is internally expanded to c(a1,a2,...,ak, rep(ak,J-k)).
-}
-\item{\dots}{
-  further arguments for \code{\link[MASS]{polr}}.
+  Prior for the coefficents. only Student-t, \code{Student(mean, scale, df, autoscale)}, can be used. \code{mean}, \code{scale} and \code{df} can be a vector. For example, scale = c(a1,a2,...,ak); if k < the total number of predictors, it is internally expanded to c(a1,a2,...,ak, rep(ak,J-k)). If \code{autoscale=TRUE}, \code{scale} will be modified internally based on the values of the predictors.
 }
   
 }
@@ -54,9 +51,7 @@ bpolr(formula, data, weights, start, subset, na.action,
 }
 
 \examples{
-
 library(BhGLM)
-
 
 N = 1000
 K = 100
@@ -68,7 +63,6 @@ yy = sim.y(x=x[, nz], mu = 10, herit=h, p.neg=0.5, sigma=1.6, quantiles = c(0.3,
 yy$coefs
 y = as.factor(yy$y.ordinal)
 table(y)
-
 
 par(mfrow = c(1, 3), cex.axis = 1, mar = c(3, 4, 4, 4))
 # classical ordered logistic regression

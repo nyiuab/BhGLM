@@ -85,7 +85,6 @@ For Cox models, \code{measures} includes:
 }
 
 \examples{
-
 library(BhGLM)
 library(survival)
 library(glmnet)

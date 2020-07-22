@@ -89,18 +89,12 @@ Nengjun Yi, nyi@uab.edu
 }
 
 \examples{
-## Example 1: genetic association studies
-data(fake.cv) #load data from BhGLM
-geno = fake.cv[, -c(1:4)] #get genotype data
-x = make.main(geno = geno, model = "additive", fill.missing = T)
-x = make.main(geno = geno, model = "Cockerham", fill.missing = T, ind.group = fake.cv$y1)
+library(BhGLM)
 
-## Example 2: QTL mapping in experimental crosses
-require(qtl)
-require(qtlbim)
-data(listeria)
-listeria
-x = make.main(geno = listeria, model = "Cockerham", fill.missing = T, geno.order = F, loci.names = "position")
-## then we can follow the example in bglm to detect QTL
+x = sim.x(n=100, m=10, genotype=6:10)
+geno = x[, 6:10] #get genotype data
+x.g = make.main(geno=geno, model="additive", fill.missing=T)
+x.g = make.main(geno=geno, model="Cockerham", fill.missing=T)
+
 }
 

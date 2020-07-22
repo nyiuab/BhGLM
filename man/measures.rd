@@ -107,7 +107,6 @@ The function \code{surv.curves} plots survival curves of groups of individuals a
 }
 
 \examples{
- 
 library(BhGLM)
 
 N = 1000

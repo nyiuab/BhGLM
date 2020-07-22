@@ -73,7 +73,6 @@ summary.mbglm(object, vr.name=NULL, sort=FALSE)
 }
 
 \examples{
-
 library(BhGLM)
 library(NBZIMM)
 
@@ -110,4 +109,11 @@ sds = out[,2]
 padj = out[,4]
 plot.bh(coefs=coefs, sds=sds, pvalues=padj, threshold=0.001, gap=1000)
 
+out = summary.mbglm(f)
+out = out[out[,2]!="(Intercept)", ]
+df = out[,c(1:4, 6)]; colnames(df)[5] = "pvalue" 
+g = NBZIMM::heat.p(df=df, p.breaks = c(0.001, 0.01, 0.05), 
+           colors = c("black", "darkgrey", "grey", "lightgrey"),
+           zigzag=c(T,F), abbrv=c(T,F), margin=c(2.5,0.5), y.size=8,
+           legend=T)
 }

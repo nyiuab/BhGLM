@@ -41,11 +41,12 @@ geno.freq(geno, freq = TRUE, digits = 4, verbose = FALSE)
 }
 
 \examples{
+library(BhGLM)
 
-data(fake.cv) #load data from BhGLM
-geno = fake.cv[, -c(1:4)] #get genotype data
-geno.freq(geno, freq = TRUE)
-geno.freq(geno, freq = FALSE)
+x = sim.x(n=100, m=10, genotype=6:10)
+geno = x[, 6:10] #get genotype data
+geno.freq(geno, freq=TRUE)
+geno.freq(geno, freq=FALSE)
 
 }
 

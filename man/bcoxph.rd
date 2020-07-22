@@ -20,7 +20,7 @@ bcoxph(formula, data, weights, subset, na.action, init,
        control = coxph.control(eps = 1e-04, iter.max = 50), 
        ties = c("breslow", "efron"), tt,  
        prior = Student(0, 0.5, 1), group = NULL, method.coef, 
-       Warning = FALSE, verbose = FALSE, ...)
+       Warning = FALSE, verbose = FALSE)
 }
 
 %- maybe also 'usage' for other objects documented here.
@@ -30,9 +30,6 @@ bcoxph(formula, data, weights, subset, na.action, init,
 }
   \item{prior, group, method.coef, Warning, verbose}{ 
   These arguments are the same as in the function \code{\link{bglm}}.
-}
-\item{\dots}{
-  further arguments for \code{\link{coxph}}.
 }
 
 }
@@ -76,7 +73,6 @@ into the standard Newton-Raphson procedure as implemented in the function \code{
 }
 
 \examples{
-
 library(BhGLM)
 library(survival)
 

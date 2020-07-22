@@ -50,15 +50,5 @@ Spiegelhalter, D.J., Best, N.G., Carlin, B.P., and Linde, A.v.d. (2002) Bayesian
 
 \examples{
 
-data(fake.cv) #load simulated common variants dataset
-y = fake.cv[, 1] # binary trait
-covar = fake.cv[, c(3, 4)]   # covariates
-x.main = make.main(geno = fake.cv[, -c(1:4)], model = "Cockerham", fill.missing = T, geno.order = T)
-x = cbind(covar, x.main)
-f = bglm(y ~ ., data = x, family = binomial(link = "logit"), prior = "t", prior.scale = 0.5)
-plot.bh(f, gap = 5)
-df.adj(f)  # for the whole fitted model
-df.adj(f, f$group.vars[[1]]) # for the predictors in the first group
-
 }
 

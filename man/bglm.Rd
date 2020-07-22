@@ -9,7 +9,7 @@
 
 \description{
   This function is to set up Bayesian hierarchical GLMs, and to fit the model using the EM-IWLS algorithm. 
-  Three types of priors on each coefficient can be used: Student-t, double-exponential, and spike-and-slab mixture double-exponential.  
+  Four types of priors on each coefficient can be used: Student-t, double-exponential, spike-and-slab mixture Student-t, and spike-and-slab mixture double-exponential.  
   The Bayesian hierarchical GLMs include various models as special cases, e.g., classical GLMs, ridge regression, and Bayesian lasso. 
   It can be used for analyzing general data and large-scale and highly-correlated variables 
   (for example, detecting disease-associated factors and predicting phenotypes).
@@ -19,7 +19,7 @@
 bglm(formula, family = gaussian, data, offset, weights, subset, na.action, 
     start = NULL, etastart, mustart, control = glm.control(epsilon = 1e-04, maxit = 50), 
     prior = Student(0, 0.5, 1), group = NULL, method.coef,
-    Warning = FALSE, verbose = FALSE, ...)  
+    Warning = FALSE, verbose = FALSE)  
 }
 
 %- maybe also 'usage' for other objects documented here.
@@ -32,11 +32,11 @@ bglm(formula, family = gaussian, data, offset, weights, subset, na.action,
   also can be Negative Binomial (\code{NegBin or "NegBin"}).
 }
   \item{prior}{
-  Prior distribustions for the coefficents. Three types of priors can be used; Student-t: \code{Student(mean, scale, df)} (default: mean=0, scale=0.5, df=1), Double-exponetial: \code{De(mean, scale)} (default: mean=0, scale=0.5), and mixture double-exponential: \code{mde(mean, s0, s1)}, s0 < s1, default: mean=0, s0=0.04, s1=0.5. 
-  The \code{mean}, \code{scale} and \code{df} can be a vector. For example, scale = c(a1,a2,...,ak); if k < the total number of predictors, it is internally expanded to c(a1,a2,...,ak, rep(ak,J-k)).
+  Prior distribustions for the coefficents. Four types of priors can be used; Student-t: \code{Student(mean, scale, df, autoscale)} (default: mean=0, scale=0.5, df=1, autoscale=TRUE), Double-exponetial: \code{De(mean, scale, autoscale)} (default: mean=0, scale=0.5, autoscale=TRUE), mixture double-exponential: \code{mde(mean, s0, s1)}, and mixture Student-t: \code{mt(mean, s0, s1)}, s0 < s1, default: mean=0, s0=0.04, s1=0.5. 
+  The \code{mean}, \code{scale} and \code{df} can be a vector. For example, scale = c(a1,a2,...,ak); if k < the total number of predictors, it is internally expanded to c(a1,a2,...,ak, rep(ak,J-k)). If \code{autoscale=TRUE}, \code{scale} will be modified internally (see details).
 }
 \item{group}{
-  a numeric vector, or an integer, or a list definining the groups of predictors. Only used for \code{mde}. 
+  a numeric vector, or an integer, or a list definining the groups of predictors. Only used for \code{mde} or code{mt} priors. 
   If \code{group = NULL}, all the predictors form a single group.
   If \code{group = K}, the predictors are evenly divided into groups each with \code{K} predictors.
   If \code{group} is a numberic vector, it defines groups as follows: Group 1: \code{(group[1]+1):group[2]}, Group 2: \code{(group[2]+1):group[3]}, Group 3: \code{(group[3]+1):group[4]}, .....  
@@ -55,15 +55,13 @@ bglm(formula, family = gaussian, data, offset, weights, subset, na.action,
   \item{verbose}{
   logical. If \code{TRUE}, print out number of iterations and computational time.
 }
-  \item{\dots}{
-  further arguments for \code{\link{glm}}.
-}
+
 }
 
 \details{
   This function sets up Bayesian hierarchical GLMs and fits the model using the EM-IWLS algorithm. It is an alteration of the standard function \code{\link{glm}} for classical GLMs, and includes all the \code{\link{glm}} arguments and also some new arguments for Bayesian modeling. 
 
-  For \code{Student(mean, scale)} and \code{De(mean, scale)}, \code{scale} is modified internally: for a predictor with only one value nothing is changed; for a predictor x with exactly two unique values, we divide the user-specified scale \code{scale} by the range of x; for a predictor x with more than two unique values, we divide the user-specified scale by sd(x). For gaussian models, \code{scale} is further multiplied by sd(y).  
+  For the priors \code{Student} and \code{De}, if \code{autoscale=TRUE}, \code{scale} is modified internally: for a predictor with only one value nothing is changed; for a predictor x with exactly two unique values, we divide the user-specified scale \code{scale} by the range of x; for a predictor x with more than two unique values, we divide the user-specified scale by sd(x). For gaussian models, \code{scale} is further multiplied by sd(y).  
   
   The argument \code{group} is used for the prior \code{mde(mean, s0, s1)}, allowing for group-specific inclusion probabilities and thus incorporating group information (e.g. bilogical pathways). With the prior \code{mde(mean, s0, s1)}, the predictors can be grouped or ungrouped. For ungrouped predictors, the prior is double-exponential with scale \code{s1}. 
    
