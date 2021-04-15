@@ -38,7 +38,7 @@ mbglm <- function(y, formula, data, family=NegBin(), prior=Student(0, 1),
   res
 }
 
-summary.mbglm <- function(object, vr.name=NULL, sort=FALSE) 
+summary.mbglm <- function(object) 
 {
   obj.fit <- object$fit
   obj.resp <- object$responses
@@ -52,7 +52,7 @@ summary.mbglm <- function(object, vr.name=NULL, sort=FALSE)
   }
   variables <- rownames(res)
   res <- data.frame(responses, variables, res)
-  rownames(res) <- NULL
+  rownames(res) <- paste(res[,1], "--", res[,2], sep="")
   res$padj <- res$pvalue
   for(j in 1:length(obj.vars))
   {
@@ -61,23 +61,7 @@ summary.mbglm <- function(object, vr.name=NULL, sort=FALSE)
     res[nam, "padj"] <- signif(p.adjust(p, method="fdr"), 2)
   }
   colnames(res)[3:4] <- c("Estimate", "Std.Error")
-  out <- res
-  
-  if (!is.null(vr.name))
-  {
-    if (!vr.name %in% c(obj.resp, obj.vars)) stop("wrong name given")
-    if (vr.name %in% obj.resp) {
-      res0 <- res[res[, 1]==vr.name, ]
-      rownames(res0) <- res0[, 2]  
-    }
-    if (vr.name %in% obj.vars) {
-      res0 <- res[res[, 2]==vr.name, ]
-      rownames(res0) <- res0[, 1]
-    }
-    res0 <- as.matrix(res0[, 3:6])
-    if (sort) res0 <- res0[names(sort(res0[, "padj"])), ]
-    out <- list(res=res, res0=res0)
-  }
+  out <- res[res[,2]!="(Intercept)", ] 
   
   return(out)
 }

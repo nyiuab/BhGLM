@@ -18,6 +18,7 @@ bcoxph <- function (formula, data, weights, subset, na.action, init,
     if (is.null(prior.df)) prior.df <- 1
     ss <- prior$ss
     if (is.null(ss)) ss <- c(0.04, 0.5)
+    b <- prior$b
     prior <- prior[[1]]
     prior.sd <- 0.5 
     if (missing(method.coef)) method.coef <- NULL 
@@ -236,7 +237,7 @@ bcoxph <- function (formula, data, weights, subset, na.action, init,
                       control=control, strats=factor(strats),
                       ties=ties, prior=prior, group=group, method.coef=method.coef, 
                       prior.mean=prior.mean, prior.sd=prior.sd, 
-                      prior.scale=prior.scale, prior.df=prior.df, autoscale=autoscale, ss=ss, 
+                      prior.scale=prior.scale, prior.df=prior.df, autoscale=autoscale, ss=ss, b=b,
                       theta.weights=theta.weights, inter.hierarchy=inter.hierarchy, inter.parents=inter.parents, 
                       Warning=Warning) 
     
@@ -281,7 +282,7 @@ bcoxph.fit <- function(x, y, offset=rep(0, nobs), weights=rep(1, nobs), init=0, 
                        control=coxph.control(eps=1e-04, iter.max=50), ties="efron", 
                        prior="t", group=NULL, method.coef=NULL, 
                        prior.mean=0, prior.sd=1, prior.scale=1, prior.df=1, autoscale=TRUE,
-                       ss=c(0.05, 0.1), theta.weights=NULL, inter.hierarchy=NULL, inter.parents=NULL,
+                       ss=c(0.05, 0.1), b=1, theta.weights=NULL, inter.hierarchy=NULL, inter.parents=NULL,
                        Warning=FALSE) 
 {
   ss <- sort(ss)
@@ -322,6 +323,10 @@ bcoxph.fit <- function(x, y, offset=rep(0, nobs), weights=rep(1, nobs), init=0, 
     if (length(theta.weights)!=length(gvars)) stop("all grouped variables should have theta.weights")
     if (any(theta.weights > 1 | theta.weights < 0)) stop("theta.weights should be in [0,1]")
     names(theta.weights) <- gvars
+    
+    if (length(b) < length(group.vars)) 
+      b <- c(b, rep(b[length(b)], length(group.vars) - length(b)) )
+    b <- b[1:length(group.vars)]
   }
   
   names(init) <- colnames(x)
@@ -347,7 +352,7 @@ bcoxph.fit <- function(x, y, offset=rep(0, nobs), weights=rep(1, nobs), init=0, 
         prior.scale[gvars] <- out[[1]]   
         p <- out[[2]]
         if (!is.matrix(group))
-          theta <- update.ptheta.group(group.vars=group.vars, p=p, w=theta.weights)
+          theta <- update.ptheta.group(group.vars=group.vars, p=p, w=theta.weights, b=b)
         else theta <- update.ptheta.network(theta=theta, p=p, w=group) 
         
         if (!is.null(inter.hierarchy))
@@ -438,9 +443,9 @@ bcoxph.fit <- function(x, y, offset=rep(0, nobs), weights=rep(1, nobs), init=0, 
     fit$p <- p
     fit$ptheta <- theta
     if (prior == "mde")
-      fit$prior <- list(prior=prior, mean=prior.mean, s0=ss[1], s1=ss[2])
+      fit$prior <- list(prior=prior, mean=prior.mean, s0=ss[1], s1=ss[2], b=b)
     if (prior == "mt") 
-      fit$prior <- list(prior=prior, mean=prior.mean, s0=ss[1], s1=ss[2], df=prior.df)
+      fit$prior <- list(prior=prior, mean=prior.mean, s0=ss[1], s1=ss[2], df=prior.df, b=b)
     fit$theta.weights <- theta.weights
   }
   

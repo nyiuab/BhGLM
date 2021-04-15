@@ -1,6 +1,7 @@
 
 bmlasso <- function(x, y, family=c("gaussian", "binomial", "poisson", "cox"), offset=NULL,
-                    epsilon=1e-04, maxit=50, init=NULL, ss=c(0.04, 0.5), group=NULL, 
+                    epsilon=1e-04, maxit=50, init=NULL, 
+                    alpha=c(1, 0), ss=c(0.04, 0.5), b=1, group=NULL, 
                     theta.weights=NULL, inter.hierarchy=NULL, inter.parents=NULL,
                     Warning=FALSE, verbose=FALSE) 
 {
@@ -25,9 +26,10 @@ bmlasso <- function(x, y, family=c("gaussian", "binomial", "poisson", "cox"), of
     if (!is.Surv(y)) stop("'y' should be a 'Surv' object")
   if (family == "gaussian") y <- (y - mean(y))/sd(y)
   if (!is.null(init) & length(init) != ncol(x)) stop("give an initial value to each coefficient (not intercept)")
-
+  alpha <- alpha[1]
+  
   f <- bmlasso.fit(x=x, y=y, family=family, offset=offset, epsilon=epsilon, maxit=maxit, init=init,
-                   group=group, ss=ss, 
+                   group=group, alpha=alpha, ss=ss, b=b, 
                    theta.weights=theta.weights, inter.hierarchy=inter.hierarchy, inter.parents=inter.parents,
                    Warning=Warning)
   
@@ -44,10 +46,10 @@ bmlasso <- function(x, y, family=c("gaussian", "binomial", "poisson", "cox"), of
   return(f)
 }
 
-# ******************************************************************************
+# ************************************************************************************
 
 bmlasso.fit <- function(x, y, family="gaussian", offset=NULL, epsilon=1e-04, maxit=50, 
-                        init=rep(0, ncol(x)), group=NULL, ss=c(0.04, 0.5), 
+                        init=rep(0, ncol(x)), alpha=1, ss=c(0.04, 0.5), b=1, group=NULL, 
                         theta.weights=NULL, inter.hierarchy=NULL, inter.parents=NULL,
                         Warning=FALSE)
 {  
@@ -79,12 +81,17 @@ bmlasso.fit <- function(x, y, family="gaussian", offset=NULL, epsilon=1e-04, max
   if (length(theta.weights)!=length(gvars)) stop("all grouped variables should have theta.weights")
   if (any(theta.weights > 1 | theta.weights < 0)) stop("theta.weights should be in [0,1]")
   names(theta.weights) <- gvars
-  
+  if (length(b) < length(group.vars)) 
+    b <- c(b, rep(b[length(b)], length(group.vars) - length(b)) )
+  b <- b[1:length(group.vars)]
+  bb <- b
+    
   if (is.null(init)) {
     for (k in 1:5) {
       ps <- ss[1] + (k - 1) * 0.01
       if (family == "cox") ps <- min(ss[1] + (k - 1) * 0.01, 0.08)
-      f <- glmnet(x=x, y=y, family=family, offset=offset, alpha=0.95, 
+      alpha0 <- ifelse(alpha==1, 0.95, 0.05)
+      f <- glmnet(x=x, y=y, family=family, offset=offset, alpha=alpha0, 
                   lambda=1/(nrow(x) * ps), standardize=TRUE)
       b <- as.numeric(f$beta)
       if (any(b != 0)) break
@@ -99,11 +106,13 @@ bmlasso.fit <- function(x, y, family="gaussian", offset=NULL, epsilon=1e-04, max
   conv <- FALSE
   for (iter in 1:maxit){
     
-    out <- update.scale.p(b0=b[gvars], ss=ss, theta=theta)
+    if(alpha==1) 
+      out <- update.scale.p(prior="mde", b0=b[gvars], ss=ss, theta=theta)
+    else out <- update.scale.p(prior="mt", df=1e+10, b0=b[gvars], ss=ss, theta=theta)
     prior.scale[gvars] <- out[[1]]   
     p <- out[[2]]
     if (!is.matrix(group))
-      theta <- update.ptheta.group(group.vars=group.vars, p=p, w=theta.weights)
+      theta <- update.ptheta.group(group.vars=group.vars, p=p, w=theta.weights, b=bb)
     else theta <- update.ptheta.network(theta=theta, p=p, w=group)
     
     if (!is.null(inter.hierarchy))
@@ -114,7 +123,7 @@ bmlasso.fit <- function(x, y, family="gaussian", offset=NULL, epsilon=1e-04, max
                                             p=p)
     
     Pf <- 1/(prior.scale + 1e-10)
-    f <- glmnet(x = x, y = y, family = family, offset = offset, alpha = 1, 
+    f <- glmnet(x = x, y = y, family = family, offset = offset, alpha = alpha, 
                 penalty.factor = Pf, lambda = sum(Pf)/(nrow(x) * ncol(x)), standardize = FALSE)
     
     b <- as.numeric(f$beta) #/sqrt(dispersion)
@@ -151,6 +160,7 @@ bmlasso.fit <- function(x, y, family="gaussian", offset=NULL, epsilon=1e-04, max
   f$ungroup.vars <- ungroup.vars
   f$p <- p
   f$ptheta <- theta
+  f$b <- bb
   f$theta.weights <- theta.weights
   
   return(f)

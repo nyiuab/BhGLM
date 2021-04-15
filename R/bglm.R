@@ -16,6 +16,7 @@ bglm <- function (formula, family=gaussian, data, offset, weights, subset, na.ac
   if (is.null(prior.df)) prior.df <- 1
   ss <- prior$ss
   if (is.null(ss)) ss <- c(0.04, 0.5)
+  b <- prior$b
   prior <- prior[[1]]
   if (missing(method.coef)) method.coef <- NULL 
   
@@ -69,7 +70,7 @@ bglm <- function (formula, family=gaussian, data, offset, weights, subset, na.ac
                   family=family, control=control, intercept=attr(mt, "intercept") > 0,
                   prior=prior, group=group, method.coef=method.coef, 
                   dispersion=dispersion, prior.mean=prior.mean, prior.sd=prior.sd, 
-                  prior.scale=prior.scale, prior.df=prior.df, autoscale=autoscale, ss=ss, 
+                  prior.scale=prior.scale, prior.df=prior.df, autoscale=autoscale, ss=ss, b=b,
                   theta.weights=theta.weights, inter.hierarchy=inter.hierarchy, inter.parents=inter.parents,
                   Warning=Warning)
   
@@ -97,7 +98,7 @@ bglm.fit <- function (x, y, weights=rep(1, nobs), start=NULL, etastart=NULL, mus
                offset=rep(0, nobs), family=gaussian(), control=glm.control(), intercept=TRUE,  
                prior="de", group=NULL, method.coef=1, 
                dispersion=1, prior.mean=0, prior.sd=0.5, prior.scale=1, prior.df=1, autoscale=TRUE,
-               ss=c(0.05, 0.1), theta.weights=NULL, inter.hierarchy=NULL, inter.parents=NULL,
+               ss=c(0.05, 0.1), b=1, theta.weights=NULL, inter.hierarchy=NULL, inter.parents=NULL,
                Warning=FALSE)   
 {
     ss <- sort(ss)
@@ -145,6 +146,10 @@ bglm.fit <- function (x, y, weights=rep(1, nobs), start=NULL, etastart=NULL, mus
       if (length(theta.weights)!=length(gvars)) stop("all grouped variables should have theta.weights")
       if (any(theta.weights > 1 | theta.weights < 0)) stop("theta.weights should be in [0,1]")
       names(theta.weights) <- gvars
+      
+      if (length(b) < length(group.vars)) 
+        b <- c(b, rep(b[length(b)], length(group.vars) - length(b)) )
+      b <- b[1:length(group.vars)]
     }
     
     # for negative binomial model
@@ -272,7 +277,7 @@ bglm.fit <- function (x, y, weights=rep(1, nobs), start=NULL, etastart=NULL, mus
                 prior.scale[gvars] <- out[[1]]   
                 p <- out[[2]]
                 if (!is.matrix(group))
-                  theta <- update.ptheta.group(group.vars=group.vars, p=p, w=theta.weights)
+                  theta <- update.ptheta.group(group.vars=group.vars, p=p, w=theta.weights, b=b)
                 else theta <- update.ptheta.network(theta=theta, p=p, w=group) 
                 
                 if (!is.null(inter.hierarchy))
@@ -506,9 +511,9 @@ bglm.fit <- function (x, y, weights=rep(1, nobs), start=NULL, etastart=NULL, mus
       out$p <- p
       out$ptheta <- theta
       if (prior == "mde")
-        out$prior <- list(prior=prior, mean=prior.mean, s0=ss[1], s1=ss[2])
+        out$prior <- list(prior=prior, mean=prior.mean, s0=ss[1], s1=ss[2], b=b)
       if (prior == "mt") 
-        out$prior <- list(prior=prior, mean=prior.mean, s0=ss[1], s1=ss[2], df=prior.df)
+        out$prior <- list(prior=prior, mean=prior.mean, s0=ss[1], s1=ss[2], df=prior.df, b=b)
       out$theta.weights <- theta.weights
     }
     if (nb){ 
@@ -554,17 +559,17 @@ update.scale.p <- function(prior="mde", df=1, b0, ss, theta)
   list(scale=scale, p=p)
 }
 
-update.ptheta.group <- function(group.vars, p, w) # group-specific probability
+update.ptheta.group <- function(group.vars, p, w, b) # group-specific probability
 {
-  f <- function(theta, w, p) {
-    sum(p*log(w*theta) + (1-p)*log(1-w*theta))
+  f <- function(theta, w, p, bb) { # theta ~ beta(1,b)  
+    sum(p*log(w*theta) + (1-p)*log(1-w*theta)) + mean((bb-1)*log(1-theta))
   }
   theta <- p
   for (j in 1:length(group.vars)) {  
     vars <- group.vars[[j]]
 #    theta[vars] <- mean(p[vars])  # posterior mode with theta~beta(1,1)
     theta[vars] <- optimize(f, interval=c(0, 1), 
-                            w=w[vars], p=p[vars], maximum=T)$maximum
+                            w=w[vars], p=p[vars], bb=b[j], maximum=T)$maximum
   } 
   theta <- ifelse(theta < 0.01, 0.01, theta)
   theta <- ifelse(theta > 0.99, 0.99, theta)
@@ -678,18 +683,18 @@ De <- function(mean=0, scale=0.5, autoscale=TRUE)
   if (any(scale < 0)) stop("'scale' cannot be negative")
   list(prior="de", mean=mean, scale=scale, autoscale=autoscale)
 }
-mde <- function(mean=0, s0=0.04, s1=0.5)
+mde <- function(mean=0, s0=0.04, s1=0.5, b=1)
 {
   if (s0 < 0 | s1 < 0) stop("scale cannot be negative")
   if (s0 > s1) stop("s0 should be smaller than s1")
-  list(prior="mde", mean=mean, ss=c(s0,s1))
+  list(prior="mde", mean=mean, ss=c(s0,s1), b=b)
 }
-mt <- function(mean=0, s0=0.04, s1=0.5, df=1)
+mt <- function(mean=0, s0=0.04, s1=0.5, df=1, b=1)
 {
   if (s0 < 0 | s1 < 0) stop("scale cannot be negative")
   if (s0 > s1) stop("s0 should be smaller than s1")
   if (any(df < 0)) stop("'df' cannot be negative")
-  list(prior="mt", mean=mean, ss=c(s0,s1), df=df)
+  list(prior="mt", mean=mean, ss=c(s0,s1), df=df, b=b)
 }
 
 auto_scale <- function(x, min.x.sd=1e-04)

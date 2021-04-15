@@ -314,6 +314,7 @@ cv.bh.polr <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
 
 cv.gam.glm <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
 {
+  # offset always in 'formula'
   data.obj <- model.frame(object)
   y.obj <- model.response(data.obj)
   n <- NROW(y.obj)
@@ -323,10 +324,6 @@ cv.gam.glm <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
   ncv <- fol$ncv
   measures0 <- lp0 <- y.fitted0 <- NULL
   j <- 0
-  if (!is.null(object$offset)) {
-    data.obj <- object$data
-    if (is.null(object$data)) stop("'data' not given in object")
-  }
   
   fam <- object$family$family
   if (substr(object$family$family, 1, 17) == "Negative Binomial")
@@ -381,6 +378,7 @@ cv.gam.glm <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
 
 cv.gam.coxph <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
 {
+  # offset always in 'formula'
   require(survival)
   data.obj <- model.frame(object)
   y.obj <- Surv(model.response(data.obj), object$prior.weights)
@@ -391,10 +389,6 @@ cv.gam.coxph <- function(object, nfolds=10, foldid=NULL, ncv=1, verbose=TRUE)
   ncv <- fol$ncv
   measures0 <- lp0 <- NULL
   j <- 0
-  if (!is.null(object$offset)) {
-    data.obj <- object$data
-    if (is.null(object$data)) stop("'data' not given in object")
-  }
   
   if (verbose) cat("Fitting", "ncv*nfolds =", ncv*nfolds, "models: \n")
   for (k in 1:ncv) {
