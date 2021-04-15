@@ -15,7 +15,7 @@
 mbglm(y, formula, data, family=NegBin(), prior=Student(0,1),
       min.p=0, verbose=TRUE)
       
-summary.mbglm(object, vr.name=NULL, sort=FALSE)
+summary.mbglm(object)
 }
 
 \arguments{
@@ -35,12 +35,6 @@ summary.mbglm(object, vr.name=NULL, sort=FALSE)
   \item{object}{ 
   an object from \code{\link{mbglm}}.
 }
-  \item{vr.name}{
-  name of a variable or response. 
-}
-  \item{sort}{
-  sort by the adjusted p-values into ascending order.
-}
 
 }
 
@@ -56,8 +50,7 @@ summary.mbglm(object, vr.name=NULL, sort=FALSE)
   \item{responses}{names of all the responses;}
   \item{variables}{names of all covariates;}
 
-  If \code{vr.name=NULL}, the function \code{summary.mbglm} returns a data frame consisting of responses, variables, estimates, standard deviations, p-vlaues and adjusted p-vlaues (using FDR method) for all coefficients. 
-  If \code{vr.name} is specified, \code{summary.mbglm} returns a list with two components, for all coefficients and for the specified coefficient, respectively.
+  The function \code{summary.mbglm} returns a data frame consisting of responses, variables, estimates, standard deviations, p-vlaues and adjusted p-vlaues (using FDR method) for all coefficients. 
 }
 
 \references{
@@ -101,16 +94,14 @@ s = unlist(s)
 f = mbglm(y=otu, formula=~ Days + Age + Race + preg + offset(log(s)), 
           family=NegBin(), prior=Student(0, 1), min.p=0.1)
 
-out = summary.mbglm(f, vr.name="preg", sort=T)[[2]]
-#out = summary.mbglm(f, vr.name="Finegoldia.magna")[[2]]
-out
-coefs = out[,1]
-sds = out[,2]
-padj = out[,4]
+out = summary.mbglm(f)
+out = out[out[,2]=="preg", ]
+coefs = out[,3]; names(coefs) = out[,1]
+sds = out[,4]
+padj = out[,6]
 plot.bh(coefs=coefs, sds=sds, pvalues=padj, threshold=0.001, gap=1000)
 
 out = summary.mbglm(f)
-out = out[out[,2]!="(Intercept)", ]
 df = out[,c(1:4, 6)]; colnames(df)[5] = "pvalue" 
 g = NBZIMM::heat.p(df=df, p.breaks = c(0.001, 0.01, 0.05), 
            colors = c("black", "darkgrey", "grey", "lightgrey"),

@@ -18,7 +18,7 @@
 \usage{    
 bglm(formula, family = gaussian, data, offset, weights, subset, na.action, 
     start = NULL, etastart, mustart, control = glm.control(epsilon = 1e-04, maxit = 50), 
-    prior = Student(0, 0.5, 1), group = NULL, method.coef,
+    prior = Student(), group = NULL, method.coef,
     Warning = FALSE, verbose = FALSE)  
 }
 
@@ -32,11 +32,11 @@ bglm(formula, family = gaussian, data, offset, weights, subset, na.action,
   also can be Negative Binomial (\code{NegBin or "NegBin"}).
 }
   \item{prior}{
-  Prior distribustions for the coefficents. Four types of priors can be used; Student-t: \code{Student(mean, scale, df, autoscale)} (default: mean=0, scale=0.5, df=1, autoscale=TRUE), Double-exponetial: \code{De(mean, scale, autoscale)} (default: mean=0, scale=0.5, autoscale=TRUE), mixture double-exponential: \code{mde(mean, s0, s1)}, and mixture Student-t: \code{mt(mean, s0, s1)}, s0 < s1, default: mean=0, s0=0.04, s1=0.5. 
-  The \code{mean}, \code{scale} and \code{df} can be a vector. For example, scale = c(a1,a2,...,ak); if k < the total number of predictors, it is internally expanded to c(a1,a2,...,ak, rep(ak,J-k)). If \code{autoscale=TRUE}, \code{scale} will be modified internally (see details).
+  Prior distribustions for the coefficents. Four types of priors can be used; Student-t: \code{Student(mean, scale, df, autoscale)} (default: mean=0, scale=0.5, df=1, autoscale=TRUE), Double-exponetial: \code{De(mean, scale, autoscale)} (default: mean=0, scale=0.5, autoscale=TRUE), mixture double-exponential: \code{mde(mean, s0, s1, b)}, and mixture Student-t: \code{mt(mean, s0, s1, df, b)}, s0 < s1, default: mean=0, s0=0.04, s1=0.5, df=1, b=1. 
+  The \code{mean}, \code{scale}, \code{df} and \code{b} can be a vector. For example, scale = c(a1,a2,...,ak); if k < the total number of predictors, it is internally expanded to c(a1,a2,...,ak, rep(ak,J-k)). If \code{autoscale=TRUE}, \code{scale} will be modified internally (see details).
 }
 \item{group}{
-  a numeric vector, or an integer, or a list definining the groups of predictors. Only used for \code{mde} or code{mt} priors. 
+  a numeric vector, or an integer, or a list definining the groups of predictors. Only used for \code{mde} or \code{mt} priors. 
   If \code{group = NULL}, all the predictors form a single group.
   If \code{group = K}, the predictors are evenly divided into groups each with \code{K} predictors.
   If \code{group} is a numberic vector, it defines groups as follows: Group 1: \code{(group[1]+1):group[2]}, Group 2: \code{(group[2]+1):group[3]}, Group 3: \code{(group[3]+1):group[4]}, .....  
@@ -63,7 +63,9 @@ bglm(formula, family = gaussian, data, offset, weights, subset, na.action,
 
   For the priors \code{Student} and \code{De}, if \code{autoscale=TRUE}, \code{scale} is modified internally: for a predictor with only one value nothing is changed; for a predictor x with exactly two unique values, we divide the user-specified scale \code{scale} by the range of x; for a predictor x with more than two unique values, we divide the user-specified scale by sd(x). For gaussian models, \code{scale} is further multiplied by sd(y).  
   
-  The argument \code{group} is used for the prior \code{mde(mean, s0, s1)}, allowing for group-specific inclusion probabilities and thus incorporating group information (e.g. bilogical pathways). With the prior \code{mde(mean, s0, s1)}, the predictors can be grouped or ungrouped. For ungrouped predictors, the prior is double-exponential with scale \code{s1}. 
+  The argument \code{group} is only used for the prior \code{mde} or \code{mt}, allowing for group-specific inclusion probabilities and thus incorporating group information (e.g. biological pathways). With the mixture prior, the predictors can be grouped or ungrouped. For ungrouped predictors, the prior is double-exponential or Student-t with scale \code{s1}. 
+  
+  The prior \code{mde(mean, s0, s1, b)} represents a mixture of \code{De(mean, s0)} and \code{De(mean, s1)} with group-specific inclusion probabilities following beta(1,b). The tuning parameter \code{b} can be a vector of group-specific values.   
    
 }
 
