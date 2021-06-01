@@ -24,7 +24,7 @@ bmlasso <- function(x, y, family=c("gaussian", "binomial", "poisson", "cox"), of
   family <- family[1]
   if (family == "cox")  
     if (!is.Surv(y)) stop("'y' should be a 'Surv' object")
-  if (family == "gaussian") y <- (y - mean(y))/sd(y)
+#  if (family == "gaussian") y <- (y - mean(y))/sd(y)
   if (!is.null(init) & length(init) != ncol(x)) stop("give an initial value to each coefficient (not intercept)")
   alpha <- alpha[1]
   

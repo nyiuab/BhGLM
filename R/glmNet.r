@@ -24,7 +24,7 @@ glmNet <- function (x, y, family = c("gaussian", "binomial", "poisson", "cox"), 
   family <- family[1]
   if (family == "cox")  
     if (!is.Surv(y)) stop("'y' should be a 'Surv' object")
-  if (family == "gaussian") y <- (y - mean(y))/sd(y)
+#  if (family == "gaussian") y <- (y - mean(y))/sd(y)
   alpha <- alpha[1]
   if (length(penalty.factor) != ncol(x)) stop("give each predictor a penalty")
   names(penalty.factor) <- colnames(x)
