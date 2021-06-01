@@ -25,7 +25,6 @@ bmlasso(x, y, family = c("gaussian", "binomial", "poisson", "cox"),
   }
   \item{y}{
    response variable. Quantitative for family="gaussian", or family="poisson" (non-negative counts). 
-   For family="gaussian", y is always been standardized. 
    For family="binomial", y should be either a factor with two levels, or a two-column matrix of counts or proportions (the second column is treated as the target class; for a factor, the last level in alphabetical order is the target class). 
    For family="cox", y should be a two-column matrix with columns named 'time' and 'status'. The latter is a binary variable, with '1' indicating death, and '0' indicating right censored. The function Surv() in package \bold{survival} produces such a matrix.  
   }
