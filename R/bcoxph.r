@@ -433,6 +433,7 @@ bcoxph.fit <- function(x, y, offset=rep(0, nobs), weights=rep(1, nobs), init=0, 
   fit$group.vars <- group.vars
   fit$ungroup.vars <- ungroup.vars
   fit$method.coef <- method.coef
+  fit$offset <- NULL
   
   if (prior == "t") 
     fit$prior <- list(prior=prior, mean=prior.mean, scale=prior.scale, df=prior.df)
