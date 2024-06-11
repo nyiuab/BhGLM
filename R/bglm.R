@@ -2,8 +2,8 @@
 bglm <- function (formula, family=gaussian, data, offset, weights, subset, na.action, 
            start=NULL, etastart, mustart, control=glm.control(epsilon=1e-04, maxit=50), 
            prior=Student(), group=NULL, method.coef, 
-           theta.weights=NULL, inter.hierarchy=NULL, inter.parents=NULL,
-           prior.sd=0.5, dispersion=1, Warning=FALSE, verbose=FALSE)  
+           theta.weights=NULL, eff.hierarchy=NULL, eff.parents=NULL, sumtozero=FALSE,
+           Warning=FALSE, verbose=FALSE)  
 {
   start.time <- Sys.time()
   
@@ -19,6 +19,8 @@ bglm <- function (formula, family=gaussian, data, offset, weights, subset, na.ac
   b <- prior$b
   prior <- prior[[1]]
   if (missing(method.coef)) method.coef <- NULL 
+  prior.sd <- 0.5 # initial value
+  dispersion <- 1 # initial value
   
   contrasts <- NULL
   call <- match.call()
@@ -71,8 +73,8 @@ bglm <- function (formula, family=gaussian, data, offset, weights, subset, na.ac
                   prior=prior, group=group, method.coef=method.coef, 
                   dispersion=dispersion, prior.mean=prior.mean, prior.sd=prior.sd, 
                   prior.scale=prior.scale, prior.df=prior.df, autoscale=autoscale, ss=ss, b=b,
-                  theta.weights=theta.weights, inter.hierarchy=inter.hierarchy, inter.parents=inter.parents,
-                  Warning=Warning)
+                  theta.weights=theta.weights, eff.hierarchy=eff.hierarchy, eff.parents=eff.parents,
+                  sumtozero=sumtozero, Warning=Warning)
   
   fit$model <- mf
   fit$na.action <- attr(mf, "na.action")
@@ -92,14 +94,14 @@ bglm <- function (formula, family=gaussian, data, offset, weights, subset, na.ac
   fit
 }
 
-#*******************************************************************************
+#**************************************************************************************************
 
 bglm.fit <- function (x, y, weights=rep(1, nobs), start=NULL, etastart=NULL, mustart=NULL, 
                offset=rep(0, nobs), family=gaussian(), control=glm.control(), intercept=TRUE,  
                prior="de", group=NULL, method.coef=1, 
                dispersion=1, prior.mean=0, prior.sd=0.5, prior.scale=1, prior.df=1, autoscale=TRUE,
-               ss=c(0.05, 0.1), b=1, theta.weights=NULL, inter.hierarchy=NULL, inter.parents=NULL,
-               Warning=FALSE)   
+               ss=c(0.05, 0.1), b=1, theta.weights=NULL, eff.hierarchy=NULL, eff.parents=NULL,
+               sumtozero=FALSE, Warning=FALSE)   
 {
     ss <- sort(ss)
     ss <- ifelse(ss <= 0, 0.001, ss)
@@ -134,6 +136,7 @@ bglm.fit <- function (x, y, weights=rep(1, nobs), start=NULL, etastart=NULL, mus
     if (intercept) covars0 <- c(colnames(x)[1], covars0)
     method.coef <- "joint"
     if (length(group0) > 1) method.coef <- "group"
+    if (sumtozero) method.coef <- "joint"
     
     # for mixture prior
     if (prior == "mde" | prior == "mt") {
@@ -280,11 +283,9 @@ bglm.fit <- function (x, y, weights=rep(1, nobs), start=NULL, etastart=NULL, mus
                   theta <- update.ptheta.group(group.vars=group.vars, p=p, w=theta.weights, b=b)
                 else theta <- update.ptheta.network(theta=theta, p=p, w=group) 
                 
-                if (!is.null(inter.hierarchy))
-                  theta.weights <- update.theta.weights(gvars=gvars, 
-                                                        theta.weights=theta.weights, 
-                                                        inter.hierarchy=inter.hierarchy, 
-                                                        inter.parents=inter.parents, 
+                if (!is.null(eff.hierarchy))
+                  theta.weights <- update.theta.weights(eff.hierarchy=eff.hierarchy, 
+                                                        eff.parents=eff.parents, 
                                                         p=p)
               }
               
@@ -299,6 +300,15 @@ bglm.fit <- function (x, y, weights=rep(1, nobs), start=NULL, etastart=NULL, mus
             colnames(x.prior) <- colnames(x)
             x.star <- rbind(x, x.prior)
             w.star <- c(w, 1/(prior.sd + 1e-04) )
+            if (sumtozero)
+            {
+              z.star <- c(z.star, rep(0, length(group.vars)))
+              w.star <- c(w.star, rep(1/1e-03, length(group.vars)))
+              xx <- array(0, dim = c(length(group.vars), NCOL(x)))
+              colnames(xx) <- colnames(x)
+              for (j in 1:length(group.vars)) xx[j, group.vars[[j]]] <- 1 
+              x.star <- rbind(x.star, xx)
+            }
 #            good.star <- c(good, rep(TRUE, NCOL(x.prior)))
 #            fit <- qr(x.star[good.star, , drop = FALSE] * w.star, tol = min(1e-07, control$epsilon/1000))
             fit <- qr(x.star * w.star, tol = min(1e-07, control$epsilon/1000))
@@ -391,7 +401,7 @@ bglm.fit <- function (x, y, weights=rep(1, nobs), start=NULL, etastart=NULL, mus
               if (n.df <= 0) n.df <- n.df0
               dispersion <- Sum/n.df 
             } 
-            dispersion <- ifelse(dispersion > 1e+04,1e+04, dispersion) 
+            dispersion <- ifelse(dispersion > 1e+04, 1e+04, dispersion) 
             dispersion <- ifelse(dispersion < 1e-04, 1e-04, dispersion)
             
             if(nb)  # for negative binomial model
@@ -525,7 +535,7 @@ bglm.fit <- function (x, y, weights=rep(1, nobs), start=NULL, etastart=NULL, mus
     return(out)
 }
 
-#*******************************************************************************
+#*************************************************************************************
 
 update.prior.sd <- function (prior, beta0, prior.scale, prior.df, sd.x, min.x.sd) 
 {
@@ -562,7 +572,7 @@ update.scale.p <- function(prior="mde", df=1, b0, ss, theta)
 update.ptheta.group <- function(group.vars, p, w, b) # group-specific probability
 {
   f <- function(theta, w, p, bb) { # theta ~ beta(1,b)  
-    sum(p*log(w*theta) + (1-p)*log(1-w*theta)) + mean((bb-1)*log(1-theta))
+    sum(p*log(w*theta) + (1-p)*log(1-w*theta)) + mean((bb-1)*log(1-theta)) # mean: because theta is vector
   }
   theta <- p
   for (j in 1:length(group.vars)) {  
@@ -578,11 +588,11 @@ update.ptheta.group <- function(group.vars, p, w, b) # group-specific probabilit
   theta
 }
 
-update.ptheta.network <- function(theta, p, w) 
+update.ptheta.network <- function(theta, p, w) # beta random Markov field, similar to Gaussian random Markov field 
 {
   phi <- 2
   for (j in 1:length(theta)) {  
-    mu <- w %*% theta
+    mu <- w %*% theta # w is standardized in Grouping()
     m <- mu[j] - w[j,j]*theta[j]
     a <- m*phi
     b <- (1-m)*phi
@@ -594,28 +604,27 @@ update.ptheta.network <- function(theta, p, w)
   theta
 }
 
-update.theta.weights <- function (gvars, theta.weights, inter.hierarchy, inter.parents, p)
+update.theta.weights <- function (eff.hierarchy, eff.parents, p)
 {
-  if (is.null(inter.parents)) 
-    stop("'inter.parents' should be given")
-  if (!is.list(inter.parents))
-    stop("'inter.parents' should be a list") 
-  xnames <- strsplit(gvars, split=":", fixed=T)
-  inter <- unlist(lapply(xnames, function(x){length(x)}))
-  if (length(inter.parents)!=length(inter[inter==2]))
-    stop("interactions are not correctly specified in formula or inter.parents")
+  if (is.null(eff.parents)) 
+    stop("'eff.parents' should be given")
+  if (!is.list(eff.parents))
+    stop("'eff.parents' should be a list") 
+
+  if (eff.hierarchy=="strong")
+    ww <- lapply(eff.parents, 
+                function(x, p){ prod(p[x]) }, 
+                p)
+  if (eff.hierarchy=="weak")
+    ww <- lapply(eff.parents, 
+                function(x, p){ mean(p[x]) }, 
+                p)
+  ww <- unlist(ww)
+  names(ww) <- names(p)
+#  for (j in 1:length(ww))
+#    if (length(eff.parents[[j]])==1) ww[j] <- 1
   
-  p.main <- p[inter==1]
-  if (inter.hierarchy=="strong")
-    ww <- lapply(inter.parents, 
-                function(x, p.main){ p.main[x[1]] * p.main[x[2]] }, 
-                p.main)
-  if (inter.hierarchy=="weak")
-    ww <- lapply(inter.parents, 
-                 function(x, p.main){ (p.main[x[1]] + p.main[x[2]])/2 }, 
-                 p.main)
-  theta.weights[inter==2] <- unlist(ww)
-  theta.weights
+  ww
 }
   
 
